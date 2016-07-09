@@ -1,0 +1,3 @@
+celery
+
+-e git+ssh://git@bitbucket.org/cusdeb/shirow.git#egg=shirow

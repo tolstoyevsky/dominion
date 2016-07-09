@@ -1,0 +1,6 @@
+.idea
+__pycache__
+bundles
+dist
+dominion.egg-info
+node_modules
