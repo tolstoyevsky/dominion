@@ -9,6 +9,7 @@ setup(name='dominion',
       maintainer_email='Evgeny Golyshev <eugulixes@gmail.com>',
       license='http://www.apache.org/licenses/LICENSE-2.0',
       packages=['dominion'],
+      scripts=['bin/server.py'],
       install_requires=[
           'celery',
       ])
