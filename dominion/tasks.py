@@ -118,21 +118,17 @@ def build(user_id, build_id, packages_list=None):
 
     pid, fd = pty.fork()
     if pid == 0:  # child
-        if packages_list:
-            env = {
-                'PATH': os.environ['PATH'],
-                'BASEDIR': target_dir,
-                'CHROOT_SOURCE': intermediate_dir,
-                'IMAGE_NAME': '{}/{}'.format(workspace, build_id),
-                'RPI2_BUILDER_LOCATION': builder_location,
-                'APT_INCLUDES': ','.join(packages_list)
-            }
-            command_line = [
-                'sh', 'run.sh'
-            ]
-            os.execvpe(command_line[0], command_line, env)
-        else:
-            pass
+        apt_includes = ','.join(packages_list) if packages_list else ''
+        env = {
+            'PATH': os.environ['PATH'],
+            'BASEDIR': target_dir,
+            'CHROOT_SOURCE': intermediate_dir,
+            'IMAGE_NAME': '{}/{}'.format(workspace, build_id),
+            'RPI2_BUILDER_LOCATION': builder_location,
+            'APT_INCLUDES': apt_includes
+        }
+        command_line = ['sh', 'run.sh']
+        os.execvpe(command_line[0], command_line, env)
     else:  # parent
         redis_conn = redis.StrictRedis()
 
