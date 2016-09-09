@@ -106,7 +106,7 @@ class Dominion(RPCServer):
             except OSError:
                 pass
 
-        while True:
+        for i in range(self._attempts_number):
             if self._ptyfd:
                 fd = os.fdopen(self._ptyfd)
                 self.io_loop.add_handler(fd, build_log_handler,
@@ -115,6 +115,11 @@ class Dominion(RPCServer):
 
             self.logger.debug('An fd has not been received yet')
             yield gen.sleep(1)
+
+        if not self._ptyfd:
+            error_message = 'An fd has not been received'
+            request.ret_error(error_message)
+            self.logger.error(error_message)
 
 
 def main():
