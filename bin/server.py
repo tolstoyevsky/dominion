@@ -62,13 +62,6 @@ class Dominion(RPCServer):
 
             break
 
-    def _fail_request(self, message):
-        self.logger.error(message)
-        # According to RFC 6455 1011 indicates that a server is terminating the
-        # connection because it encountered an unexpected condition that
-        # prevented it from fulfilling the request.
-        self.close(1011, message)
-
     def create(self):
         self._redis_key = dominion.util.get_redis_key(self.user_id)
 
@@ -82,10 +75,13 @@ class Dominion(RPCServer):
                 break
             else:
                 self.logger.debug('Could not get a socket name')
-                gen.sleep(1)
+                yield gen.sleep(1)
 
         if not socket_name:
-            self._fail_request('Build process is not running')
+            error_message = 'Build process is not running'
+            request.ret_error(error_message)
+            self.logger.error(error_message)
+            return
 
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._bind(socket_name)
