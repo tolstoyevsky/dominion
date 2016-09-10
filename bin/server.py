@@ -26,6 +26,7 @@ from tornado import gen
 from tornado.options import options
 
 import dominion.util
+from dominion.tasks import MAGIC_PHRASE
 
 
 class Application(tornado.web.Application):
@@ -101,8 +102,13 @@ class Dominion(RPCServer):
 
         def build_log_handler(*args, **kwargs):
             try:
-                res = os.read(self._ptyfd, 65536)
-                request.ret_and_continue(res.decode('utf8'))
+                data = os.read(self._ptyfd, 65536)
+                request.ret_and_continue(data.decode('utf8'))
+
+                # Cleaning up
+                if data == MAGIC_PHRASE:
+                    self.io_loop.remove_handler(self._ptyfd)
+                    self._ptyfd = None
             except OSError:
                 pass
 
