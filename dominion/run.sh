@@ -1,2 +1,2 @@
 cd ${RPI2_BUILDER_LOCATION}
-./rpi2-gen-image.sh
+./rpi23-gen-image.sh
