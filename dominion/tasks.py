@@ -21,12 +21,16 @@ import subprocess
 import threading
 import time
 
+import django
 import redis
 from celery import Celery, bootsteps
 from celery.bin import Option
 from celery.utils.log import get_task_logger
 
 import dominion.util
+from firmwares.models import Firmware
+from users.models import User
+
 
 app = Celery('tasks', backend='rpc://', broker='amqp://guest@localhost//')
 app.user_options['worker'].add(Option(
@@ -48,6 +52,8 @@ app.user_options['worker'].add(Option(
     default='/var/dominion/workspace',
     help='')
 )
+
+django.setup()
 
 
 class ConfigBootstep(bootsteps.Step):
@@ -89,6 +95,13 @@ def pass_fd(sock, socket_name, fd):
         break
 
     dominion.util.send_fds(sock, fd)
+
+
+def get_user(user_id):
+    try:
+        return User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return None
 
 
 @app.task(name='tasks.build')
@@ -143,6 +156,13 @@ def build(user_id, build_id, packages_list=None):
         thread.start()
 
         os.waitpid(pid, 0)
+
+        user = get_user(user_id)
+        if user:
+            firmware = Firmware(name=build_id, user=user)
+            firmware.save()
+        else:
+            LOGGER.critical('User {} does not exist'.format(user))
 
         os.write(fd, MAGIC_PHRASE)
 
