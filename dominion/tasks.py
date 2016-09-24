@@ -124,6 +124,8 @@ def build(user_id, build_id, packages_list=None):
             'BASEDIR': target_dir,
             'CHROOT_SOURCE': intermediate_dir,
             'IMAGE_NAME': '{}/{}'.format(workspace, build_id),
+            'WORKSPACE_DIR': workspace,
+            'BUILD_ID': build_id,
             'RPI2_BUILDER_LOCATION': builder_location,
             'APT_INCLUDES': apt_includes
         }
