@@ -140,7 +140,10 @@ def build(user_id, build_id, packages_list=None):
             'WORKSPACE_DIR': workspace,
             'BUILD_ID': build_id,
             'RPI2_BUILDER_LOCATION': builder_location,
-            'APT_INCLUDES': apt_includes
+            'APT_INCLUDES': apt_includes,
+            'ENABLE_ROOT': 'true',
+            'PASSWORD': 'raspberry'
+
         }
         command_line = ['sh', 'run.sh']
         os.execvpe(command_line[0], command_line, env)
