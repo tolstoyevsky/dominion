@@ -42,6 +42,7 @@ class Dominion(RPCServer):
         RPCServer.__init__(self, application, request, **kwargs)
 
         self._attempts_number = 30
+        self._fd_added = False  # to prevent adding fd twice
         self._ptyfd = None
         self._redis_key = None
         self._sock = None
@@ -113,10 +114,11 @@ class Dominion(RPCServer):
                 pass
 
         for i in range(self._attempts_number):
-            if self._ptyfd:
+            if self._ptyfd and not self._fd_added:
                 fd = os.fdopen(self._ptyfd)
                 self.io_loop.add_handler(fd, build_log_handler,
                                          self.io_loop.READ)
+                self._fd_added = True
                 break
 
             self.logger.debug('An fd has not been received yet')
