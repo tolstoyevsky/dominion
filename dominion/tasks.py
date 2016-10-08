@@ -105,7 +105,7 @@ def get_user(user_id):
 
 
 @app.task(name='tasks.build')
-def build(user_id, build_id, packages_list=None):
+def build(user_id, build_id, packages_list=None, root_password=None):
     if packages_list is None:
         packages_list = []
 
@@ -140,11 +140,13 @@ def build(user_id, build_id, packages_list=None):
             'WORKSPACE_DIR': workspace,
             'BUILD_ID': build_id,
             'RPI2_BUILDER_LOCATION': builder_location,
-            'APT_INCLUDES': apt_includes,
-            'ENABLE_ROOT': 'true',
-            'PASSWORD': 'raspberry'
-
+            'APT_INCLUDES': apt_includes
         }
+
+        if root_password:
+            env['ENABLE_ROOT'] = 'true'
+            env['PASSWORD'] = root_password
+
         command_line = ['sh', 'run.sh']
         os.execvpe(command_line[0], command_line, env)
     else:  # parent
