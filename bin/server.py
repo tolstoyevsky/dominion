@@ -21,7 +21,7 @@ import tornado.options
 import tornado.web
 import tornado.websocket
 from shirow.ioloop import IOLoop
-from shirow.server import RPCServer, remote
+from shirow.server import RPCServer, TOKEN_PATTEN, remote
 from tornado import gen
 from tornado.options import options
 
@@ -32,7 +32,7 @@ from dominion.tasks import MAGIC_PHRASE
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/dominion/token/([_\-\w\.]+)', Dominion),
+            (r'/dominion/token/' + TOKEN_PATTEN, Dominion),
         ]
         tornado.web.Application.__init__(self, handlers)
 
