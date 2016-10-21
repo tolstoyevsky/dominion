@@ -106,7 +106,7 @@ def get_user(user_id):
 
 @app.task(name='tasks.build')
 def build(user_id, build_id, packages_list=None, root_password=None,
-          users=None):
+          users=None, target=None):
     if packages_list is None:
         packages_list = []
 
@@ -147,6 +147,10 @@ def build(user_id, build_id, packages_list=None, root_password=None,
         if root_password:
             env['ENABLE_ROOT'] = 'true'
             env['PASSWORD'] = root_password
+
+        if target:
+            model = '3' if target['device'] == 'Raspberry Pi 3' else '2'
+            env['RPI_MODEL'] = model
 
         if users:
             user = users[0]  # rpi23-gen-image can't work with multiple users
