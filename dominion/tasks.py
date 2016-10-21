@@ -105,7 +105,8 @@ def get_user(user_id):
 
 
 @app.task(name='tasks.build')
-def build(user_id, build_id, packages_list=None, root_password=None):
+def build(user_id, build_id, packages_list=None, root_password=None,
+          users=None):
     if packages_list is None:
         packages_list = []
 
@@ -146,6 +147,12 @@ def build(user_id, build_id, packages_list=None, root_password=None):
         if root_password:
             env['ENABLE_ROOT'] = 'true'
             env['PASSWORD'] = root_password
+
+        if users:
+            user = users[0]  # rpi23-gen-image can't work with multiple users
+            env['ENABLE_USER'] = 'true'
+            env['USER_NAME'] = user['username']
+            env['USER_PASSWORD'] = user['password']
 
         command_line = ['sh', 'run.sh']
         os.execvpe(command_line[0], command_line, env)
