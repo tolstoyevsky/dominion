@@ -68,22 +68,8 @@ class Dominion(RPCServer):
         self._redis_key = dominion.util.get_redis_key(self.user_id)
 
     @remote
-    def get_rt_build_log(self, request):
-        socket_name = None
-
-        for i in range(self._attempts_number):
-            socket_name = self.redis_conn.get(self._redis_key)
-            if socket_name:
-                break
-            else:
-                self.logger.debug('Could not get a socket name')
-                yield gen.sleep(1)
-
-        if not socket_name:
-            error_message = 'Build process is not running'
-            request.ret_error(error_message)
-            self.logger.error(error_message)
-            return
+    def get_rt_build_log(self, request, build_id):
+        socket_name = '/tmp/' + build_id
 
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         self._bind(socket_name)

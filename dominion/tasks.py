@@ -165,7 +165,6 @@ def build(user_id, build_id, packages_list=None, root_password=None,
 
         redis_key = dominion.util.get_redis_key(user_id)
         socket_name = '/tmp/{}'.format(build_id)
-        redis_conn.set(redis_key, socket_name)
 
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         thread = threading.Thread(target=pass_fd, args=(sock, socket_name, fd))
