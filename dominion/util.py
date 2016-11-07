@@ -18,10 +18,6 @@ import socket
 MESSAGE = b'ptyfd'
 
 
-def get_redis_key(user_id):
-    return 'user:{}:build'.format(user_id)
-
-
 def send_fds(sock, fd):
     return sock.sendmsg([MESSAGE],
                         [(socket.SOL_SOCKET,

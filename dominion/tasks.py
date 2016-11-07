@@ -22,7 +22,6 @@ import threading
 import time
 
 import django
-import redis
 from celery import Celery, bootsteps
 from celery.bin import Option
 from celery.utils.log import get_task_logger
@@ -161,9 +160,6 @@ def build(user_id, build_id, packages_list=None, root_password=None,
         command_line = ['sh', 'run.sh']
         os.execvpe(command_line[0], command_line, env)
     else:  # parent
-        redis_conn = redis.StrictRedis()
-
-        redis_key = dominion.util.get_redis_key(user_id)
         socket_name = '/tmp/{}'.format(build_id)
 
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -182,5 +178,4 @@ def build(user_id, build_id, packages_list=None, root_password=None,
         os.write(fd, MAGIC_PHRASE)
 
         # Cleaning up
-        redis_conn.delete(redis_key)
         shutil.rmtree(target_dir)

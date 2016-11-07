@@ -44,7 +44,6 @@ class Dominion(RPCServer):
         self._attempts_number = 30
         self._fd_added = False  # to prevent adding fd twice
         self._ptyfd = None
-        self._redis_key = None
         self._sock = None
 
     def _bind(self, socket_name):
@@ -63,9 +62,6 @@ class Dominion(RPCServer):
                 continue
 
             break
-
-    def create(self):
-        self._redis_key = dominion.util.get_redis_key(self.user_id)
 
     @remote
     def get_rt_build_log(self, request, build_id):
