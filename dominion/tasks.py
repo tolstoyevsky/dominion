@@ -16,6 +16,7 @@ import errno
 import os
 import pty
 import shutil
+import signal
 import socket
 import subprocess
 import threading
@@ -75,7 +76,7 @@ LOGGER = get_task_logger(__name__)
 MAGIC_PHRASE = b"Let's wind up"
 
 
-def pass_fd(sock, socket_name, fd):
+def _pass_fd(sock, socket_name, fd):
     """Connects to the server when it's ready and passes fd to it"""
 
     while True:
@@ -96,7 +97,7 @@ def pass_fd(sock, socket_name, fd):
     dominion.util.send_fds(sock, fd)
 
 
-def get_user(user_id):
+def _get_user(user_id):
     try:
         return User.objects.get(id=user_id)
     except User.DoesNotExist:
@@ -112,31 +113,27 @@ def build(user_id, build_id, packages_list=None, root_password=None,
     base_system = app.conf.get('BASE_SYSTEM', './jessie-armhf')
     builder_location = app.conf.get('BUILDER_LOCATION', './rpi2-gen-image')
     workspace = app.conf.get('WORKSPACE', './workspace')
-    # ./workspace/63afa1cf-3599-4b76-818a-e2064d7fc829/build
-    # ./workspace/63afa1cf-3599-4b76-818a-e2064d7fc829/intermediate
+
+    # rpi23-gen-image creates
+    # ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/build, but we have to
+    # create ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/intermediate to
+    # store the rootfs of the future image.
     target_dir = '{}/{}'.format(workspace, build_id)
     intermediate_dir = '{}/{}'.format(target_dir, 'intermediate')
-
-    try:
-        os.makedirs(target_dir)
-    except os.error as e:
-        LOGGER.critical('Cannot create tmp directory ({0}): {1}'.
-                        format(e.errno, e.strerror))
-
-    command_line = ['cp', '-r', base_system, intermediate_dir]
-    proc = subprocess.Popen(command_line)
-    proc.wait()
-
     LOGGER.info('intermediate: {}'.format(intermediate_dir))
 
     pid, fd = pty.fork()
     if pid == 0:  # child
+        # The chroot environment might not be ready yet, so the process sends
+        # STOP to itself. Its parent will resume it later.
+        os.kill(os.getpid(), signal.SIGSTOP)
+
         apt_includes = ','.join(packages_list) if packages_list else ''
         env = {
             'PATH': os.environ['PATH'],
             'BASEDIR': target_dir,
             'CHROOT_SOURCE': intermediate_dir,
-            'IMAGE_NAME': '{}/{}'.format(workspace, build_id),
+            'IMAGE_NAME': target_dir,
             'WORKSPACE_DIR': workspace,
             'BUILD_ID': build_id,
             'RPI2_BUILDER_LOCATION': builder_location,
@@ -160,22 +157,43 @@ def build(user_id, build_id, packages_list=None, root_password=None,
         command_line = ['sh', 'run.sh']
         os.execvpe(command_line[0], command_line, env)
     else:  # parent
-        socket_name = '/tmp/{}'.format(build_id)
+        socket_name = '/tmp/' + build_id
 
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        thread = threading.Thread(target=pass_fd, args=(sock, socket_name, fd))
+        thread = threading.Thread(target=_pass_fd,
+                                  args=(sock, socket_name, fd))
         thread.start()
 
-        os.waitpid(pid, 0)
+        try:
+            os.makedirs(target_dir)
+        except OSError:
+            os.kill(pid, signal.SIGKILL)
+            LOGGER.critical('The directory {} already exists'.
+                            format(target_dir))
 
-        user = get_user(user_id)
-        if user:
-            firmware = Firmware(name=build_id, user=user)
-            firmware.save()
+        command_line = ['cp', '-r', base_system, intermediate_dir]
+        proc = subprocess.Popen(command_line)
+        if proc.wait() != 0:
+            os.kill(pid, signal.SIGKILL)
+            LOGGER.critical('Cannot copy {} to {}'.
+                            format(base_system, intermediate_dir))
+
+        os.write(fd, b'Start building...\n')
+
+        os.kill(pid, signal.SIGCONT)  # resume child process
+
+        _, status = os.waitpid(pid, 0)
+        if status == 0:
+            os.write(fd, MAGIC_PHRASE)
+
+            user = _get_user(user_id)
+            if user:
+                firmware = Firmware(name=build_id, user=user)
+                firmware.save()
+            else:
+                LOGGER.critical('User {} does not exist'.format(user))
         else:
-            LOGGER.critical('User {} does not exist'.format(user))
-
-        os.write(fd, MAGIC_PHRASE)
+            os.write(fd, b'Build process failed\n')
 
         # Cleaning up
         shutil.rmtree(target_dir)
