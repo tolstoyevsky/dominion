@@ -49,7 +49,6 @@ app.user_options['worker'].add(Option(
 app.user_options['worker'].add(Option(
     '--workspace',
     dest='workspace',
-    default='/var/dominion/workspace',
     help='')
 )
 
@@ -69,6 +68,10 @@ class ConfigBootstep(bootsteps.Step):
 
         if workspace:
             app.conf['WORKSPACE'] = workspace
+        else:
+            app.conf['WORKSPACE'] = '/tmp/dominion'
+            if not os.path.exists(app.conf['WORKSPACE']):
+                os.makedirs(app.conf['WORKSPACE'])
 
 app.steps['worker'].add(ConfigBootstep)
 
@@ -112,7 +115,7 @@ def build(user_id, build_id, packages_list=None, root_password=None,
 
     base_system = app.conf.get('BASE_SYSTEM', './jessie-armhf')
     builder_location = app.conf.get('BUILDER_LOCATION', './rpi2-gen-image')
-    workspace = app.conf.get('WORKSPACE', './workspace')
+    workspace = app.conf.get('WORKSPACE')
 
     # rpi23-gen-image creates
     # ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/build, but we have to
