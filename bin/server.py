@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import errno
 import os
 import socket
 
@@ -44,31 +43,15 @@ class Dominion(RPCServer):
         self._attempts_number = 30
         self._fd_added = False  # to prevent adding fd twice
         self._ptyfd = None
+        self._return = False
         self._sock = None
-
-    def _bind(self, socket_name):
-        while True:
-            try:
-                self._sock.bind(socket_name)
-            except OSError as e:
-                if e.errno == errno.EADDRINUSE:
-                    # After closing one of the previous connections there must
-                    # be the possibility, using the same socket name, to
-                    # re-create the server in order to receive the file
-                    # descriptor one more time.
-                    self.logger.debug('Removing old socket')
-                    os.unlink(socket_name)
-
-                continue
-
-            break
 
     @remote
     def get_rt_build_log(self, request, build_id):
         socket_name = '/tmp/' + build_id
 
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._bind(socket_name)
+        self._sock.bind(socket_name)
         self._sock.listen(1)
 
         def request_handler(*args, **kwargs):
@@ -86,14 +69,15 @@ class Dominion(RPCServer):
         def build_log_handler(*args, **kwargs):
             try:
                 data = os.read(self._ptyfd, 65536)
-                request.ret_and_continue(data.decode('utf8'))
-
-                # Cleaning up
-                if data == MAGIC_PHRASE:
-                    self.io_loop.remove_handler(self._ptyfd)
-                    self._ptyfd = None
             except OSError:
-                pass
+                return
+
+            if data != MAGIC_PHRASE:
+                request.ret_and_continue(data.decode('utf8'))
+            else:  # cleaning up
+                self.io_loop.remove_handler(self._ptyfd)
+                self._ptyfd = None
+                self._return = True
 
         for i in range(self._attempts_number):
             if self._ptyfd and not self._fd_added:
@@ -110,6 +94,15 @@ class Dominion(RPCServer):
             error_message = 'An fd has not been received'
             request.ret_error(error_message)
             self.logger.error(error_message)
+
+        while True:  # do not allow get_rt_build_log to return
+            if self._return:
+                # request.ret cannot be called from build_log_handler. It must
+                # be called from get_rt_build_log.
+                request.ret(MAGIC_PHRASE.decode('utf8'))
+                break
+            else:
+                yield gen.sleep(1)
 
 
 def main():
