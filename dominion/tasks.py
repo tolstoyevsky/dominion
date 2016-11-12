@@ -109,7 +109,7 @@ def _get_user(user_id):
 
 @app.task(name='tasks.build')
 def build(user_id, build_id, packages_list=None, root_password=None,
-          users=None, target=None):
+          users=None, target=None, configuration=None):
     if packages_list is None:
         packages_list = []
 
@@ -156,6 +156,25 @@ def build(user_id, build_id, packages_list=None, root_password=None,
             env['ENABLE_USER'] = 'true'
             env['USER_NAME'] = user['username']
             env['USER_PASSWORD'] = user['password']
+
+        if configuration:
+            allowed = [
+                'HOSTNAME',
+                'DEFLOCAL',
+                'TIMEZONE',
+                'ENABLE_REDUCE',
+                'REDUCE_APT',
+                'REDUCE_DOC',
+                'REDUCE_MAN',
+                'REDUCE_VIM',
+                'REDUCE_BASH',
+                'REDUCE_HWDB',
+                'REDUCE_SSHD',
+                'REDUCE_LOCALE'
+            ]
+            configuration = \
+                {k: v for k, v in configuration.items() if k in allowed}
+            env.update(configuration)
 
         command_line = ['sh', 'run.sh']
         os.execvpe(command_line[0], command_line, env)
