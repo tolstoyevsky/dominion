@@ -108,11 +108,15 @@ def _get_user(user_id):
 
 
 @app.task(name='tasks.build')
-def build(user_id, build_id, packages_list=None, root_password=None,
-          users=None, target=None, configuration=None):
+def build(user_id, image):
+    build_id = image['id']
+    packages_list = image['selected_packages']
     if packages_list is None:
         packages_list = []
-
+    root_password = image['root_password']
+    users = image['users']
+    target = image['target']
+    configuration = image['configuration']
     base_system = app.conf.get('BASE_SYSTEM', './jessie-armhf')
     builder_location = app.conf.get('BUILDER_LOCATION', './rpi2-gen-image')
     workspace = app.conf.get('WORKSPACE')
