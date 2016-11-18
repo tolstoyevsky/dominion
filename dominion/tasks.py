@@ -185,10 +185,11 @@ def build(user_id, build_id, packages_list=None, root_password=None,
 
         os.kill(pid, signal.SIGCONT)  # resume child process
 
-        _, status = os.waitpid(pid, 0)
-        if status == 0:
-            os.write(fd, MAGIC_PHRASE)
+        _, retcode = os.waitpid(pid, 0)
+        shutil.rmtree(target_dir)  # cleaning up
+        os.write(fd, MAGIC_PHRASE)
 
+        if retcode == 0:
             user = _get_user(user_id)
             if user:
                 firmware = Firmware(name=build_id, user=user)
@@ -198,5 +199,4 @@ def build(user_id, build_id, packages_list=None, root_password=None,
         else:
             os.write(fd, b'Build process failed\n')
 
-        # Cleaning up
-        shutil.rmtree(target_dir)
+        return retcode
