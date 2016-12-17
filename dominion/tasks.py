@@ -30,6 +30,7 @@ from celery.utils.log import get_task_logger
 import dominion.util
 from firmwares.models import Firmware
 from users.models import User
+from users.models import UserProfile
 
 
 app = Celery('tasks', backend='rpc://', broker='amqp://guest@localhost//')
@@ -217,6 +218,13 @@ def build(user_id, image):
             if user:
                 firmware = Firmware(name=build_id, user=user)
                 firmware.save()
+                profile = UserProfile.objects.get(id=user_id)
+                if profile:
+                    subject = '{} has built!'.format(image['target']['distro'])
+                    message = 'You can directly download it from Dashboard: https://cusdeb.com/dashboard/'
+                    user.email_user(subject, message)
+                else:
+                    LOGGER.critical('Could not get UserProfile {}'.format(user_id))
             else:
                 LOGGER.critical('User {} does not exist'.format(user))
         else:
