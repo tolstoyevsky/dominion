@@ -29,8 +29,7 @@ from celery.utils.log import get_task_logger
 
 import dominion.util
 from firmwares.models import Firmware
-from users.models import User
-from users.models import UserProfile
+from users.models import User, UserProfile
 
 
 app = Celery('tasks', backend='rpc://', broker='amqp://guest@localhost//')
@@ -108,6 +107,22 @@ def _get_user(user_id):
         return None
 
 
+def _send_email_notification(user_id, subject, message):
+    user = _get_user(user_id)
+    if user:
+        try:
+            profile = UserProfile.objects.get(id=user_id)
+        except UserProfile.DoesNotExist:
+            profile = True
+
+        if profile:
+            user.email_user(subject, message)
+        else:
+            LOGGER.critical('UserProfile {} does not exist'.format(user_id))
+    else:
+        LOGGER.critical('User {} does not exist'.format(user))
+
+
 @app.task(name='tasks.build')
 def build(user_id, image):
     build_id = image['id']
@@ -121,6 +136,8 @@ def build(user_id, image):
     base_system = app.conf.get('BASE_SYSTEM', './jessie-armhf')
     builder_location = app.conf.get('BUILDER_LOCATION', './rpi2-gen-image')
     workspace = app.conf.get('WORKSPACE')
+    subject = ''
+    message = ''
 
     # rpi23-gen-image creates
     # ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/build, but we have to
@@ -218,16 +235,19 @@ def build(user_id, image):
             if user:
                 firmware = Firmware(name=build_id, user=user)
                 firmware.save()
-                profile = UserProfile.objects.get(id=user_id)
-                if profile:
-                    subject = '{} has built!'.format(image['target']['distro'])
-                    message = 'You can directly download it from Dashboard: https://cusdeb.com/dashboard/'
-                    user.email_user(subject, message)
-                else:
-                    LOGGER.critical('Could not get UserProfile {}'.format(user_id))
+                subject = '{} has built!'.format(image['target']['distro'])
+                message = ('You can directly download it from Dashboard: '
+                           'https://cusdeb.com/dashboard/')
             else:
                 LOGGER.critical('User {} does not exist'.format(user))
         else:
+            LOGGER.critical('Build failed: {}'.format(build_id))
             os.write(fd, b'Build process failed\n')
+            subject = '{} build has failed!'.format(image['target']['distro'])
+            message = ('Sorry, something went wrong. Cusdeb team has been '
+                       'informed about the situation.')
+
+        if subject and message:
+            _send_email_notification(user_id, subject, message)
 
         return retcode
