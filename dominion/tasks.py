@@ -76,6 +76,7 @@ class ConfigBootstep(bootsteps.Step):
 app.steps['worker'].add(ConfigBootstep)
 
 LOGGER = get_task_logger(__name__)
+MAGIC_PHRASE = b"Let's wind up"
 
 
 def _pass_fd(sock, socket_name, fd):
@@ -219,6 +220,7 @@ def build(user_id, image):
 
         _, retcode = os.waitpid(pid, 0)
         shutil.rmtree(target_dir)  # cleaning up
+        os.write(fd, MAGIC_PHRASE)
 
         if retcode == 0:
             user = _get_user(user_id)
