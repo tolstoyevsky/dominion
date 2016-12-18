@@ -29,7 +29,7 @@ from celery.utils.log import get_task_logger
 
 import dominion.util
 from firmwares.models import Firmware
-from users.models import User, UserProfile
+from users.models import User
 
 
 app = Celery('tasks', backend='rpc://', broker='amqp://guest@localhost//')
@@ -104,23 +104,15 @@ def _get_user(user_id):
     try:
         return User.objects.get(id=user_id)
     except User.DoesNotExist:
+        LOGGER.critical('User {} does not exist'.format(user_id))
         return None
 
 
 def _send_email_notification(user_id, subject, message):
     user = _get_user(user_id)
     if user:
-        try:
-            profile = UserProfile.objects.get(id=user_id)
-        except UserProfile.DoesNotExist:
-            profile = True
-
-        if profile:
+        if user.userprofile.email_notifications:
             user.email_user(subject, message)
-        else:
-            LOGGER.critical('UserProfile {} does not exist'.format(user_id))
-    else:
-        LOGGER.critical('User {} does not exist'.format(user))
 
 
 @app.task(name='tasks.build')
@@ -238,8 +230,6 @@ def build(user_id, image):
                 subject = '{} has built!'.format(image['target']['distro'])
                 message = ('You can directly download it from Dashboard: '
                            'https://cusdeb.com/dashboard/')
-            else:
-                LOGGER.critical('User {} does not exist'.format(user))
         else:
             LOGGER.critical('Build failed: {}'.format(build_id))
             os.write(fd, b'Build process failed\n')
