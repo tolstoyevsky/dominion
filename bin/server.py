@@ -14,18 +14,17 @@
 # limitations under the License.
 
 import os
-import socket
+import pty
+import signal
 
 import tornado.options
 import tornado.web
 import tornado.websocket
 from shirow.ioloop import IOLoop
 from shirow.server import RPCServer, TOKEN_PATTERN, remote
-from tornado import gen
 from tornado.options import options
 
-import dominion.util
-from dominion.tasks import MAGIC_PHRASE
+BUF_SIZE = 65536
 
 
 class Application(tornado.web.Application):
@@ -39,70 +38,35 @@ class Application(tornado.web.Application):
 class Dominion(RPCServer):
     def __init__(self, application, request, **kwargs):
         RPCServer.__init__(self, application, request, **kwargs)
+        self._fd = None
+        self._pid = None
 
-        self._attempts_number = 30
-        self._fd_added = False  # to prevent adding fd twice
-        self._ptyfd = None
-        self._return = False
-        self._sock = None
+    def destroy(self):
+        self.io_loop.remove_handler(self._fd)
+        os.kill(self._pid, signal.SIGKILL)  # kill zombie process
 
     @remote
     def get_rt_build_log(self, request, build_id):
-        socket_name = '/tmp/' + build_id
+        self._pid, self._fd = pty.fork()
+        if self._pid == 0:  # child
+            command_line = [
+                'tail', '-f', '/tmp/dominion/{}.log'.format(build_id)
+            ]
+            os.execvp(command_line[0], command_line)
+        else:  # parent
+            def build_log_handler(*args, **kwargs):
+                try:
+                    data = os.read(self._fd, BUF_SIZE)
+                except OSError:
+                    return
 
-        self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        self._sock.bind(socket_name)
-        self._sock.listen(1)
-
-        def request_handler(*args, **kwargs):
-            sock, addr = self._sock.accept()
-            (message, [fd, ]) = dominion.util.recv_fds(sock)
-            self._ptyfd = fd
-
-            # Cleaning up
-            self.io_loop.remove_handler(self._sock.fileno())
-            self._sock.close()
-
-        self.io_loop.add_handler(self._sock.fileno(), request_handler,
-                                 self.io_loop.READ)
-
-        def build_log_handler(*args, **kwargs):
-            try:
-                data = os.read(self._ptyfd, 65536)
-            except OSError:
-                return
-
-            if data != MAGIC_PHRASE:
                 request.ret_and_continue(data.decode('utf8'))
-            else:  # cleaning up
-                self.io_loop.remove_handler(self._ptyfd)
-                self._ptyfd = None
-                self._return = True
 
-        for i in range(self._attempts_number):
-            if self._ptyfd and not self._fd_added:
-                fd = os.fdopen(self._ptyfd)
-                self.io_loop.add_handler(fd, build_log_handler,
-                                         self.io_loop.READ)
-                self._fd_added = True
-                break
+            self.io_loop.add_handler(self._fd, build_log_handler,
+                                     self.io_loop.READ)
 
-            self.logger.debug('An fd has not been received yet')
-            yield gen.sleep(1)
-
-        if not self._ptyfd:
-            error_message = 'An fd has not been received'
-            request.ret_error(error_message)
-            self.logger.error(error_message)
-
-        while True:  # do not allow get_rt_build_log to return
-            if self._return:
-                # request.ret cannot be called from build_log_handler. It must
-                # be called from get_rt_build_log.
-                request.ret(MAGIC_PHRASE.decode('utf8'))
-                break
-            else:
-                yield gen.sleep(1)
+            # The parent process finishes not waiting for the child.
+            # The child process becomes a zombie.
 
 
 def main():
