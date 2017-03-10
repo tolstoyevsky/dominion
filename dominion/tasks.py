@@ -196,7 +196,8 @@ def build(user_id, image):
     _write(build_log_file, 'Running build script...')
     with open(build_log_file, 'a') as output:
         command_line = ['sh', 'run.sh']
-        proc = subprocess.Popen(command_line, stdout=output, stderr=output)
+        proc = subprocess.Popen(command_line, env=env, stdout=output,
+                                stderr=output)
 
     ret_code = proc.wait()
     shutil.rmtree(target_dir)  # cleaning up
