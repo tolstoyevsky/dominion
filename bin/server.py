@@ -50,7 +50,7 @@ class Dominion(RPCServer):
         self._pid, self._fd = pty.fork()
         if self._pid == 0:  # child
             command_line = [
-                'tail', '-f', '/tmp/dominion/{}.log'.format(build_id)
+                'tail', '-f', '/var/dominion/workspace/{}.log'.format(build_id)
             ]
             os.execvp(command_line[0], command_line)
         else:  # parent
