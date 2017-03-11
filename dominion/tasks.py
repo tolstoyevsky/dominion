@@ -18,6 +18,8 @@ import subprocess
 from pathlib import Path
 
 import django
+import smtplib
+from django.core.mail import send_mail
 from celery import Celery, bootsteps
 from celery.bin import Option
 from celery.utils.log import get_task_logger
@@ -94,12 +96,42 @@ def _get_user(user_id):
         return None
 
 
-def _send_email_notification(user_id, subject, message):
-    user = _get_user(user_id)
-    if user:
-        if user.userprofile.email_notifications:
-            user.email_user(subject, message)
+def _get_firmware(build_id, user):
+    try:
+        firmware = Firmware.objects.get(name=build_id, user=user)
+    except Firmware.DoesNotExist:
+        LOGGER.critical('Firmware {} does not exist'.format(build_id))
+        return None
 
+
+def _notify_user_on_success(user, image):
+    distro = image.get('target', {}).get('distro', 'Image')
+    subject = '{} has built!'.format(distro)
+    message = ('You can directly download it from Dashboard: '
+               'https://cusdeb.com/dashboard/')
+    if user.userprofile.email_notifications:
+        user.email_user(subject, message)
+
+
+def _notify_user_on_fail(user, image):
+    distro = image.get('target', {}).get('distro', 'Image')
+    subject = '{} build has failed!'.format(distro)
+    message = ('Sorry, something went wrong. Cusdeb team has been '
+               'informed about the situation.')
+    if user.userprofile.email_notifications:
+        user.email_user(subject, message)
+
+
+def _notify_us_on_fail(user_id, image):
+    try:
+        send_mail('Build has failed!',
+                  'Please check dominion logs. user_id: {} {}'.format(user_id, 
+                                                                      image),
+                  'noreply@cusdeb.com',
+                  ['info@cusdeb.com'],
+                  fail_silently=False)
+    except smtplib.SMTPException as e:
+        LOGGER.error('Unable to send email to info@cusdeb.com: {}'.format(e))
 
 def _write(path, s):
     with open(path, 'a') as output:
@@ -120,9 +152,22 @@ def build(user_id, image):
     builder_location = APP.conf.get('BUILDER_LOCATION', './rpi2-gen-image')
     workspace = APP.conf.get('WORKSPACE')
 
+    user = _get_user(user_id)
+    if not user:
+        _notify_us_on_fail(user_id, image)
+        # it cannot notify user here
+        return BUILD_FAILED;
     if not build_id:
-        LOGGER.critical('There is no build id')
+        LOGGER.critical('There is no build id {} for user {}'.format(build_id, 
+                                                                     user_id))
+        _notify_us_on_fail(user_id, image)
+        _notify_user_on_fail(user, image)
         return BUILD_FAILED
+    firmware = _get_firmware(build_id, user)
+    if not firmware:
+        _notify_us_on_fail(user_id, image)
+        _notify_user_on_fail(user, image)
+        return BUILD_FAILED;
 
     # rpi23-gen-image creates
     # ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/build, but we have to
@@ -140,12 +185,16 @@ def build(user_id, image):
         os.makedirs(target_dir)
     except OSError:
         LOGGER.critical('The directory {} already exists'.format(target_dir))
+        _notify_us_on_fail(user_id, image)
+        _notify_user_on_fail(user, image)
         return BUILD_FAILED
 
     _write(build_log_file, 'Copying rootfs to {}...'.format(intermediate_dir))
     if not _cp(base_system, intermediate_dir):
         LOGGER.critical('Cannot copy {} to {}'.format(base_system,
                                                       intermediate_dir))
+        _notify_us_on_fail(user_id, image)
+        _notify_user_on_fail(user, image)
         return BUILD_FAILED
 
     apt_includes = ','.join(packages_list) if packages_list else ''
@@ -193,6 +242,9 @@ def build(user_id, image):
             {k: v for k, v in configuration.items() if k in allowed}
         env.update(configuration)
 
+    firmware.status = Firmware.BUILDING
+    firmware.save()
+
     _write(build_log_file, 'Running build script...')
     with open(build_log_file, 'a') as output:
         command_line = ['sh', 'run.sh']
@@ -202,22 +254,15 @@ def build(user_id, image):
     ret_code = proc.wait()
     shutil.rmtree(target_dir)  # cleaning up
 
-    subject, message = '', ''
     if ret_code == 0:
-        user = _get_user(user_id)
-        if user:
-            firmware = Firmware(name=build_id, user=user)
-            firmware.save()
-            subject = '{} has built!'.format(image['target']['distro'])
-            message = ('You can directly download it from Dashboard: '
-                       'https://cusdeb.com/dashboard/')
+        firmware.status = Firmware.DONE
+        _notify_user_on_success(user, image)
     else:
+        firmware.status = Firmware.FAILED
         LOGGER.critical('Build failed: {}'.format(build_id))
-        subject = '{} build has failed!'.format(image['target']['distro'])
-        message = ('Sorry, something went wrong. Cusdeb team has been '
-                   'informed about the situation.')
+        _notify_us_on_fail(user_id, image)
+        _notify_user_on_fail(user, image)
 
-    if subject and message:
-        _send_email_notification(user_id, subject, message)
+    firmware.save()
 
     return ret_code
