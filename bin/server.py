@@ -42,8 +42,11 @@ class Dominion(RPCServer):
         self._pid = None
 
     def destroy(self):
-        self.io_loop.remove_handler(self._fd)
-        os.kill(self._pid, signal.SIGKILL)  # kill zombie process
+        if self._fd:
+            self.io_loop.remove_handler(self._fd)
+
+        if self._pid:
+            os.kill(self._pid, signal.SIGKILL)  # kill zombie process
 
     @remote
     def get_rt_build_log(self, request, build_id):
