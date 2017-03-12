@@ -98,7 +98,7 @@ def _get_user(user_id):
 
 def _get_firmware(build_id, user):
     try:
-        firmware = Firmware.objects.get(name=build_id, user=user)
+        return Firmware.objects.get(name=build_id, user=user)
     except Firmware.DoesNotExist:
         LOGGER.critical('Firmware {} does not exist'.format(build_id))
         return None
@@ -125,13 +125,14 @@ def _notify_user_on_fail(user, image):
 def _notify_us_on_fail(user_id, image):
     try:
         send_mail('Build has failed!',
-                  'Please check dominion logs. user_id: {} {}'.format(user_id, 
+                  'Please check dominion logs. user_id: {} {}'.format(user_id,
                                                                       image),
                   'noreply@cusdeb.com',
                   ['info@cusdeb.com'],
                   fail_silently=False)
     except smtplib.SMTPException as e:
         LOGGER.error('Unable to send email to info@cusdeb.com: {}'.format(e))
+
 
 def _write(path, s):
     with open(path, 'a') as output:
@@ -155,19 +156,21 @@ def build(user_id, image):
     user = _get_user(user_id)
     if not user:
         _notify_us_on_fail(user_id, image)
-        # it cannot notify user here
-        return BUILD_FAILED;
+        # We cannot notify the user here.
+        return BUILD_FAILED
+
     if not build_id:
         LOGGER.critical('There is no build id {} for user {}'.format(build_id, 
                                                                      user_id))
         _notify_us_on_fail(user_id, image)
         _notify_user_on_fail(user, image)
         return BUILD_FAILED
+
     firmware = _get_firmware(build_id, user)
     if not firmware:
         _notify_us_on_fail(user_id, image)
         _notify_user_on_fail(user, image)
-        return BUILD_FAILED;
+        return BUILD_FAILED
 
     # rpi23-gen-image creates
     # ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/build, but we have to
