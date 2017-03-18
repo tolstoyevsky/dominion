@@ -16,6 +16,7 @@
 import os
 import pty
 import signal
+from pathlib import Path
 
 import tornado.options
 import tornado.web
@@ -50,11 +51,12 @@ class Dominion(RPCServer):
 
     @remote
     def get_rt_build_log(self, request, build_id):
+        build_log = '/var/dominion/workspace/{}.log'.format(build_id)
+        Path(build_log).touch()
+
         self._pid, self._fd = pty.fork()
         if self._pid == 0:  # child
-            command_line = [
-                'tail', '-f', '/var/dominion/workspace/{}.log'.format(build_id)
-            ]
+            command_line = ['tail', '-f', build_log]
             os.execvp(command_line[0], command_line)
         else:  # parent
             def build_log_handler(*args, **kwargs):
