@@ -108,7 +108,7 @@ def _notify_user_on_success(user, image):
     distro = image.get('target', {}).get('distro', 'Image')
     subject = '{} has built!'.format(distro)
     message = ('Download it: '
-               'https://cusdeb.com/get_firmware/{}'.format(image.get('id')))
+               'https://cusdeb.com/download/{}'.format(image.get('id')))
     if user.userprofile.email_notifications:
         user.email_user(subject, message)
 
