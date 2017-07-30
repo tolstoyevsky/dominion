@@ -39,7 +39,7 @@ APP.user_options['worker'].add(Option(
 APP.user_options['worker'].add(Option(
     '--builder-location',
     dest='builder_location',
-    default='/var/dominion/rpi2-gen-image',
+    default='/var/dominion/rpi23-gen-image',
     help='')
 )
 APP.user_options['worker'].add(Option(
@@ -150,7 +150,7 @@ def build(user_id, image):
     target = image.get('target', None)
     configuration = image.get('configuration', None)
     base_system = APP.conf.get('BASE_SYSTEM', './jessie-armhf')
-    builder_location = APP.conf.get('BUILDER_LOCATION', './rpi2-gen-image')
+    builder_location = APP.conf.get('BUILDER_LOCATION', './rpi23-gen-image')
     workspace = APP.conf.get('WORKSPACE')
 
     user = _get_user(user_id)
