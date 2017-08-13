@@ -229,7 +229,6 @@ def build(user_id, image):
     if configuration:
         allowed = [
             'HOSTNAME',
-            'DEFLOCAL',
             'TIMEZONE',
             'ENABLE_REDUCE',
             'REDUCE_APT',
