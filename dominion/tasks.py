@@ -15,6 +15,7 @@
 import os
 import shutil
 import subprocess
+import tarfile
 from pathlib import Path
 
 import django
@@ -206,8 +207,8 @@ def build(user_id, image):
         'BASEDIR': target_dir,
         'CHROOT_SOURCE': intermediate_dir,
         'IMAGE_NAME': target_dir,
-        'WORKSPACE_DIR': workspace,
-        'BUILD_ID': build_id,
+        'WORKSPACE_DIR': workspace,  # TODO: check and remove
+        'BUILD_ID': build_id,  # TODO: check and remove
         'RPI2_BUILDER_LOCATION': builder_location,
         'APT_INCLUDES': apt_includes
     }
@@ -257,6 +258,14 @@ def build(user_id, image):
     shutil.rmtree(target_dir)  # cleaning up
 
     if ret_code == 0:
+        os.chdir(workspace)
+        with tarfile.open(build_id + '.tar.gz', 'w:gz') as tar:
+            for name in [build_id + '.img', build_id + '.bmap', ]:
+                tar.add(name)
+
+        os.remove(build_id + '.img')
+        os.remove(build_id + '.bmap')
+
         firmware.status = Firmware.DONE
         _notify_user_on_success(user, image)
     else:
