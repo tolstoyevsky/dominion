@@ -23,7 +23,11 @@ import tornado.web
 import tornado.websocket
 from shirow.ioloop import IOLoop
 from shirow.server import RPCServer, TOKEN_PATTERN, remote
-from tornado.options import options
+from tornado.options import define, options
+
+define('build_log_dir',
+       help='The path to the directory which contains build logs',
+       default='/tmp/dominion')
 
 BUF_SIZE = 65536
 
@@ -51,7 +55,7 @@ class Dominion(RPCServer):
 
     @remote
     def get_rt_build_log(self, request, build_id):
-        build_log = '/var/dominion/workspace/{}.log'.format(build_id)
+        build_log = os.path.join(options.build_log_dir, '{}.log'.format(build_id))
         Path(build_log).touch()
 
         self._pid, self._fd = pty.fork()
