@@ -267,13 +267,13 @@ def build(user_id, image):
         os.remove(build_id + '.bmap')
 
         firmware.status = Firmware.DONE
+        firmware.save()
         _notify_user_on_success(user, image)
     else:
-        firmware.status = Firmware.FAILED
         LOGGER.critical('Build failed: {}'.format(build_id))
+        firmware.status = Firmware.FAILED
+        firmware.save()
         _notify_us_on_fail(user_id, image)
         _notify_user_on_fail(user, image)
-
-    firmware.save()
 
     return ret_code
