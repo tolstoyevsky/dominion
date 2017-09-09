@@ -111,7 +111,10 @@ def _notify_user_on_success(user, image):
     message = ('Download it: '
                'https://cusdeb.com/download/{}'.format(image.get('id')))
     if user.userprofile.email_notifications:
-        user.email_user(subject, message)
+        try:
+            user.email_user(subject, message)
+        except smtplib.SMTPException as e:
+            LOGGER.error('Unable to send email: {}'.format(e))
 
 
 def _notify_user_on_fail(user, image):
@@ -120,7 +123,10 @@ def _notify_user_on_fail(user, image):
     message = ('Sorry, something went wrong. Cusdeb team has been '
                'informed about the situation.')
     if user.userprofile.email_notifications:
-        user.email_user(subject, message)
+        try:
+            user.email_user(subject, message)
+        except smtplib.SMTPException as e:
+            LOGGER.error('Unable to send email: {}'.format(e))
 
 
 def _notify_us_on_fail(user_id, image):
