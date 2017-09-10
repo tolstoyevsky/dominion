@@ -31,11 +31,11 @@ from users.models import User
 
 APP = Celery('tasks', backend='rpc://', broker='amqp://guest@localhost//')
 APP.user_options['worker'].add(Option(
-    '--base-system',
-    dest='base_system',
-    default='/var/dominion/jessie-armhf',
-    help='The path to a chroot environment which contains the Debian base '
-         'system')
+    '--base-systems',
+    dest='base_systems',
+    default='/var/dominion',
+    help='The path to the directory which contains chroot environments '
+         'which, in turn, contain the Debian base system')
 )
 APP.user_options['worker'].add(Option(
     '--builder-location',
@@ -51,16 +51,21 @@ APP.user_options['worker'].add(Option(
 LOGGER = get_task_logger(__name__)
 BUILD_FAILED = 1
 
+VALID_SUITES = {
+    'Debian Jessie': 'jessie',
+    'Debian Stretch': 'stretch',
+}
+
 django.setup()
 
 
 class ConfigBootstep(bootsteps.Step):
     def __init__(self, worker,
-                 base_system=None, builder_location=None, workspace=None,
+                 base_systems=None, builder_location=None, workspace=None,
                  **options):
-        if base_system:
+        if base_systems:
             # TODO: check if the specified directory exists
-            APP.conf['BASE_SYSTEM'] = base_system
+            APP.conf['BASE_SYSTEMS'] = base_systems
 
         if builder_location:
             APP.conf['BUILDER_LOCATION'] = builder_location
@@ -71,6 +76,14 @@ class ConfigBootstep(bootsteps.Step):
             APP.conf['WORKSPACE'] = '/tmp/dominion'
             if not os.path.exists(APP.conf['WORKSPACE']):
                 os.makedirs(APP.conf['WORKSPACE'])
+
+
+class SuiteDoesNotSupport(Exception):
+    """Exception raised by the get_suite_name function if the specified suite
+    is not valid.
+    """
+    pass
+
 
 APP.steps['worker'].add(ConfigBootstep)
 
@@ -103,6 +116,14 @@ def _get_firmware(build_id, user):
     except Firmware.DoesNotExist:
         LOGGER.critical('Firmware {} does not exist'.format(build_id))
         return None
+
+
+# XXX: copy-pasted from BM. Need to share it in the future.
+def _get_suite_name(distro):
+    if distro in VALID_SUITES.keys():
+        return VALID_SUITES[distro]
+    else:
+        raise SuiteDoesNotSupport
 
 
 def _notify_user_on_success(user, image):
@@ -156,7 +177,8 @@ def build(user_id, image):
     users = image.get('users', None)
     target = image.get('target', None)
     configuration = image.get('configuration', None)
-    base_system = APP.conf.get('BASE_SYSTEM', './jessie-armhf')
+    suite = _get_suite_name(target['distro'])
+    base_system = os.path.join(APP.conf.get('BASE_SYSTEMS'), suite + '-armhf')
     builder_location = APP.conf.get('BUILDER_LOCATION', './rpi23-gen-image')
     workspace = APP.conf.get('WORKSPACE')
 
@@ -225,6 +247,7 @@ def build(user_id, image):
 
     if target:
         model = '3' if target['device'] == 'Raspberry Pi 3' else '2'
+        env['RELEASE'] = suite
         env['RPI_MODEL'] = model
 
     if users:
