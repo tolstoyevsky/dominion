@@ -16,17 +16,13 @@ import os
 import shutil
 import subprocess
 import tarfile
-from pathlib import Path
 
-import django
-import smtplib
-from django.core.mail import send_mail
 from celery import Celery, bootsteps
 from celery.bin import Option
 from celery.utils.log import get_task_logger
 
+from dominion import routines
 from firmwares.models import Firmware
-from users.models import User
 
 
 APP = Celery('tasks', backend='rpc://', broker='amqp://guest@localhost//')
@@ -48,15 +44,8 @@ APP.user_options['worker'].add(Option(
     dest='workspace',
     help='')
 )
-LOGGER = get_task_logger(__name__)
 BUILD_FAILED = 1
-
-VALID_SUITES = {
-    'Debian Jessie': 'jessie',
-    'Debian Stretch': 'stretch',
-}
-
-django.setup()
+LOGGER = get_task_logger(__name__)
 
 
 class ConfigBootstep(bootsteps.Step):
@@ -77,94 +66,7 @@ class ConfigBootstep(bootsteps.Step):
             if not os.path.exists(APP.conf['WORKSPACE']):
                 os.makedirs(APP.conf['WORKSPACE'])
 
-
-class SuiteDoesNotSupport(Exception):
-    """Exception raised by the get_suite_name function if the specified suite
-    is not valid.
-    """
-    pass
-
-
 APP.steps['worker'].add(ConfigBootstep)
-
-
-def _cp(src, dst):
-    command_line = ['cp', '-r', src, dst]
-    proc = subprocess.Popen(command_line)
-    if proc.wait() != 0:
-        LOGGER.critical('Cannot copy {} to {}'.format(src, dst))
-        return False
-
-    return True
-
-
-def _touch(path):
-    Path(path).touch()
-
-
-def _get_user(user_id):
-    try:
-        return User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        LOGGER.critical('User {} does not exist'.format(user_id))
-        return None
-
-
-def _get_firmware(build_id, user):
-    try:
-        return Firmware.objects.get(name=build_id, user=user)
-    except Firmware.DoesNotExist:
-        LOGGER.critical('Firmware {} does not exist'.format(build_id))
-        return None
-
-
-# XXX: copy-pasted from BM. Need to share it in the future.
-def _get_suite_name(distro):
-    if distro in VALID_SUITES.keys():
-        return VALID_SUITES[distro]
-    else:
-        raise SuiteDoesNotSupport
-
-
-def _notify_user_on_success(user, image):
-    distro = image.get('target', {}).get('distro', 'Image')
-    subject = '{} has built!'.format(distro)
-    message = ('Download it: '
-               'https://cusdeb.com/download/{}'.format(image.get('id')))
-    if user.userprofile.email_notifications:
-        try:
-            user.email_user(subject, message)
-        except smtplib.SMTPException as e:
-            LOGGER.error('Unable to send email: {}'.format(e))
-
-
-def _notify_user_on_fail(user, image):
-    distro = image.get('target', {}).get('distro', 'Image')
-    subject = '{} build has failed!'.format(distro)
-    message = ('Sorry, something went wrong. Cusdeb team has been '
-               'informed about the situation.')
-    if user.userprofile.email_notifications:
-        try:
-            user.email_user(subject, message)
-        except smtplib.SMTPException as e:
-            LOGGER.error('Unable to send email: {}'.format(e))
-
-
-def _notify_us_on_fail(user_id, image):
-    try:
-        send_mail('Build has failed!',
-                  'Please check dominion logs. user_id: {} {}'.format(user_id,
-                                                                      image),
-                  'noreply@cusdeb.com',
-                  ['info@cusdeb.com'],
-                  fail_silently=False)
-    except smtplib.SMTPException as e:
-        LOGGER.error('Unable to send email to info@cusdeb.com: {}'.format(e))
-
-
-def _write(path, s):
-    with open(path, 'a') as output:
-        output.write(s + '\n')
 
 
 @APP.task(name='tasks.build')
@@ -177,28 +79,28 @@ def build(user_id, image):
     users = image.get('users', None)
     target = image.get('target', None)
     configuration = image.get('configuration', None)
-    suite = _get_suite_name(target['distro'])
+    suite = routines.get_suite_name(target['distro'])
     base_system = os.path.join(APP.conf.get('BASE_SYSTEMS'), suite + '-armhf')
     builder_location = APP.conf.get('BUILDER_LOCATION', './rpi23-gen-image')
     workspace = APP.conf.get('WORKSPACE')
 
-    user = _get_user(user_id)
+    user = routines.get_user(user_id)
     if not user:
-        _notify_us_on_fail(user_id, image)
+        routines.notify_us_on_fail(user_id, image)
         # We cannot notify the user here.
         return BUILD_FAILED
 
     if not build_id:
         LOGGER.critical('There is no build id {} for user {}'.format(build_id, 
                                                                      user_id))
-        _notify_us_on_fail(user_id, image)
-        _notify_user_on_fail(user, image)
+        routines.notify_us_on_fail(user_id, image)
+        routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
-    firmware = _get_firmware(build_id, user)
+    firmware = routines.get_firmware(build_id, user)
     if not firmware:
-        _notify_us_on_fail(user_id, image)
-        _notify_user_on_fail(user, image)
+        routines.notify_us_on_fail(user_id, image)
+        routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
     # rpi23-gen-image creates
@@ -210,23 +112,24 @@ def build(user_id, image):
     LOGGER.info('intermediate: {}'.format(intermediate_dir))
     build_log_file = '{}.log'.format(target_dir)
 
-    _touch(build_log_file)
-    _write(build_log_file, 'Starting build task...')
+    routines.touch(build_log_file)
+    routines.write(build_log_file, 'Starting build task...')
 
     try:
         os.makedirs(target_dir)
     except OSError:
         LOGGER.critical('The directory {} already exists'.format(target_dir))
-        _notify_us_on_fail(user_id, image)
-        _notify_user_on_fail(user, image)
+        routines.notify_us_on_fail(user_id, image)
+        routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
-    _write(build_log_file, 'Copying rootfs to {}...'.format(intermediate_dir))
-    if not _cp(base_system, intermediate_dir):
+    routines.write(build_log_file, 'Copying rootfs '
+                                   'to {}...'.format(intermediate_dir))
+    if not routines.cp(base_system, intermediate_dir):
         LOGGER.critical('Cannot copy {} to {}'.format(base_system,
                                                       intermediate_dir))
-        _notify_us_on_fail(user_id, image)
-        _notify_user_on_fail(user, image)
+        routines.notify_us_on_fail(user_id, image)
+        routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
     apt_includes = ','.join(packages_list) if packages_list else ''
@@ -277,7 +180,7 @@ def build(user_id, image):
     firmware.status = Firmware.BUILDING
     firmware.save()
 
-    _write(build_log_file, 'Running build script...')
+    routines.write(build_log_file, 'Running build script...')
     with open(build_log_file, 'a') as output:
         command_line = ['sh', 'run.sh']
         proc = subprocess.Popen(command_line, env=env, stdout=output,
@@ -297,12 +200,12 @@ def build(user_id, image):
 
         firmware.status = Firmware.DONE
         firmware.save()
-        _notify_user_on_success(user, image)
+        routines.notify_user_on_success(user, image)
     else:
         LOGGER.critical('Build failed: {}'.format(build_id))
         firmware.status = Firmware.FAILED
         firmware.save()
-        _notify_us_on_fail(user_id, image)
-        _notify_user_on_fail(user, image)
+        routines.notify_us_on_fail(user_id, image)
+        routines.notify_user_on_fail(user, image)
 
     return ret_code
