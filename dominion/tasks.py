@@ -91,7 +91,7 @@ def build(user_id, image):
         return BUILD_FAILED
 
     if not build_id:
-        LOGGER.critical('There is no build id {} for user {}'.format(build_id, 
+        LOGGER.critical('There is no build id {} for user {}'.format(build_id,
                                                                      user_id))
         routines.notify_us_on_fail(user_id, image)
         routines.notify_user_on_fail(user, image)
@@ -205,7 +205,7 @@ def build(user_id, image):
         LOGGER.critical('Build failed: {}'.format(build_id))
         firmware.status = Firmware.FAILED
         firmware.save()
-        routines.notify_us_on_fail(user_id, image)
+        routines.notify_us_on_fail(user_id, image, build_log_file)
         routines.notify_user_on_fail(user, image)
 
     return ret_code

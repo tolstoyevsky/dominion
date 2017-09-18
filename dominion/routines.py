@@ -17,7 +17,7 @@ import subprocess
 from pathlib import Path
 
 from celery.utils.log import get_task_logger
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 
 from firmwares.models import Firmware
 from users.models import User
@@ -102,13 +102,20 @@ def notify_user_on_fail(user, image):
             LOGGER.error('Unable to send email: {}'.format(e))
 
 
-def notify_us_on_fail(user_id, image):
+def notify_us_on_fail(user_id, image, attachment=False):
     subject = 'Build has failed!'
     message = ('Please check dominion logs. '
                'user_id: {} {}'.format(user_id, image))
-
+    email = EmailMessage(
+        subject,
+        message,
+        'noreply@cusdeb.com',
+        ['info@cusdeb.com'],
+    )
+    if attachment:
+        email.attach_file(attachment)
     try:
-        send_mail(subject, message, 'noreply@cusdeb.com', ['info@cusdeb.com'])
+        email.send()
     except smtplib.SMTPException as e:
         LOGGER.error('Unable to send email to info@cusdeb.com: {}'.format(e))
 
