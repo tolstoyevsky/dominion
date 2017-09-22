@@ -136,6 +136,7 @@ def build(user_id, image):
     env = {
         'PATH': os.environ['PATH'],
         'BASEDIR': target_dir,
+        'BUILD_KERNEL': 'true',
         'CHROOT_SOURCE': intermediate_dir,
         'IMAGE_NAME': target_dir,
         'WORKSPACE_DIR': workspace,  # TODO: check and remove
