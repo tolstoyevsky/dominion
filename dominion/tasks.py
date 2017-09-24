@@ -17,6 +17,7 @@ import shutil
 import subprocess
 import tarfile
 
+import redis
 from celery import Celery, bootsteps
 from celery.bin import Option
 from celery.utils.log import get_task_logger
@@ -40,17 +41,31 @@ APP.user_options['worker'].add(Option(
     help='')
 )
 APP.user_options['worker'].add(Option(
+    '--redis-host',
+    dest='redis_host',
+    default='localhost',
+    help='')
+)
+APP.user_options['worker'].add(Option(
+    '--redis-port',
+    dest='redis_port',
+    default=6379,
+    help='')
+)
+APP.user_options['worker'].add(Option(
     '--workspace',
     dest='workspace',
     help='')
 )
 BUILD_FAILED = 1
+BUILDS_NUMBER_KEY = 'builds_number'
 LOGGER = get_task_logger(__name__)
 
 
 class ConfigBootstep(bootsteps.Step):
     def __init__(self, worker,
-                 base_systems=None, builder_location=None, workspace=None,
+                 base_systems=None, builder_location=None, redis_host=None,
+                 redis_port=None, workspace=None,
                  **options):
         if base_systems:
             # TODO: check if the specified directory exists
@@ -58,6 +73,12 @@ class ConfigBootstep(bootsteps.Step):
 
         if builder_location:
             APP.conf['BUILDER_LOCATION'] = builder_location
+
+        if redis_host:
+            APP.conf['REDIS_HOST'] = redis_host
+
+        if redis_port:
+            APP.conf['REDIS_PORT'] = redis_port
 
         if workspace:
             APP.conf['WORKSPACE'] = workspace
@@ -83,6 +104,12 @@ def build(user_id, image):
     base_system = os.path.join(APP.conf.get('BASE_SYSTEMS'), suite + '-armhf')
     builder_location = APP.conf.get('BUILDER_LOCATION', './rpi23-gen-image')
     workspace = APP.conf.get('WORKSPACE')
+
+    redis_host = APP.conf.get('REDIS_HOST')
+    redis_port = APP.conf.get('REDIS_PORT')
+    redis_conn = redis.StrictRedis(host=redis_host, port=redis_port)
+
+    redis_conn.incr(BUILDS_NUMBER_KEY)
 
     user = routines.get_user(user_id)
     if not user:
@@ -201,11 +228,13 @@ def build(user_id, image):
 
         firmware.status = Firmware.DONE
         firmware.save()
+        redis_conn.decr(BUILDS_NUMBER_KEY)
         routines.notify_user_on_success(user, image)
     else:
         LOGGER.critical('Build failed: {}'.format(build_id))
         firmware.status = Firmware.FAILED
         firmware.save()
+        redis_conn.decr(BUILDS_NUMBER_KEY)
         routines.notify_us_on_fail(user_id, image, build_log_file)
         routines.notify_user_on_fail(user, image)
 
