@@ -182,10 +182,10 @@ def build(user_id, image):
         env['RPI_MODEL'] = model
 
     if users:
-        user = users[0]  # rpi23-gen-image can't work with multiple users
+        # rpi23-gen-image can't work with multiple users
         env['ENABLE_USER'] = 'true'
-        env['USER_NAME'] = user['username']
-        env['USER_PASSWORD'] = user['password']
+        env['USER_NAME'] = users[0]['username']
+        env['USER_PASSWORD'] = users[0]['password']
 
     if configuration:
         allowed = [
