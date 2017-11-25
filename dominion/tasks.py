@@ -102,8 +102,9 @@ def build(user_id, image):
     configuration = image.get('configuration', None)
     suite = routines.get_suite_name(target['distro'])
     base_system = os.path.join(APP.conf.get('BASE_SYSTEMS'), suite + '-armhf')
-    builder_location = APP.conf.get('BUILDER_LOCATION', './rpi23-gen-image')
+    builder_location = APP.conf.get('BUILDER_LOCATION', './pieman')
     workspace = APP.conf.get('WORKSPACE')
+    target_dir = '{}/{}'.format(workspace, build_id)
 
     redis_host = APP.conf.get('REDIS_HOST')
     redis_port = APP.conf.get('REDIS_PORT')
@@ -130,46 +131,18 @@ def build(user_id, image):
         routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
-    # rpi23-gen-image creates
-    # ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/build, but we have to
-    # create ./workspace/xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx/intermediate to
-    # store the rootfs of the future image.
-    target_dir = '{}/{}'.format(workspace, build_id)
-    intermediate_dir = '{}/{}'.format(target_dir, 'intermediate')
-    LOGGER.info('intermediate: {}'.format(intermediate_dir))
     build_log_file = '{}.log'.format(target_dir)
-
     routines.touch(build_log_file)
     routines.write(build_log_file, 'Starting build task...')
 
-    try:
-        os.makedirs(target_dir)
-    except OSError:
-        LOGGER.critical('The directory {} already exists'.format(target_dir))
-        routines.notify_us_on_fail(user_id, image)
-        routines.notify_user_on_fail(user, image)
-        return BUILD_FAILED
-
-    routines.write(build_log_file, 'Copying rootfs '
-                                   'to {}...'.format(intermediate_dir))
-    if not routines.cp(base_system, intermediate_dir):
-        LOGGER.critical('Cannot copy {} to {}'.format(base_system,
-                                                      intermediate_dir))
-        routines.notify_us_on_fail(user_id, image)
-        routines.notify_user_on_fail(user, image)
-        return BUILD_FAILED
-
-    apt_includes = ','.join(packages_list) if packages_list else ''
+    includes = ','.join(packages_list) if packages_list else ''
     env = {
         'PATH': os.environ['PATH'],
-        'BASEDIR': target_dir,
-        'BUILD_KERNEL': 'true',
-        'CHROOT_SOURCE': intermediate_dir,
-        'IMAGE_NAME': target_dir,
-        'WORKSPACE_DIR': workspace,  # TODO: check and remove
-        'BUILD_ID': build_id,  # TODO: check and remove
-        'RPI2_BUILDER_LOCATION': builder_location,
-        'APT_INCLUDES': apt_includes
+        'BASE_DIR': base_system,
+        'INCLUDES': includes,
+        'PIEMAN_PATH': builder_location,
+        'PROJECT_NAME': build_id,
+        'TERM': 'linux',
     }
 
     if root_password:
@@ -191,15 +164,6 @@ def build(user_id, image):
         allowed = [
             'HOSTNAME',
             'TIMEZONE',
-            'ENABLE_REDUCE',
-            'REDUCE_APT',
-            'REDUCE_DOC',
-            'REDUCE_MAN',
-            'REDUCE_VIM',
-            'REDUCE_BASH',
-            'REDUCE_HWDB',
-            'REDUCE_SSHD',
-            'REDUCE_LOCALE'
         ]
         configuration = \
             {k: v for k, v in configuration.items() if k in allowed}

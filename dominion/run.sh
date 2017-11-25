@@ -1,1 +1,1 @@
-cd ${RPI2_BUILDER_LOCATION} && ./rpi23-gen-image.sh
+cd ${PIEMAN_PATH} && ./pieman.sh
