@@ -100,8 +100,19 @@ def get_os_name(distro):
 def notify_user_on_success(user, image):
     distro = image.get('target', {}).get('distro', 'Image')
     subject = '{} has built!'.format(distro)
-    message = ('Download it: '
-               'https://cusdeb.com/download/{}'.format(image.get('id')))
+    message = """Hello!
+
+Your image is ready. Please, download it using the following link: https://cusdeb.com/download/{}
+
+Sencerely,
+CusDeb Team
+
+
+We rely on your donations for building and supporting FREE CusDeb features.
+PayPal: https://www.paypal.me/cusdeb
+BTC: 1Nc3MXdoPpxy9CDcXBXza5kbTJGasF1wfE
+ETH: 0xC50FE2537bfeB2Cf784E3fcEda43829dF9d122f3
+""".format(image.get('id'))
 
     if user.userprofile.email_notifications:
         try:
@@ -113,8 +124,19 @@ def notify_user_on_success(user, image):
 def notify_user_on_fail(user, image):
     distro = image.get('target', {}).get('distro', 'Image')
     subject = '{} build has failed!'.format(distro)
-    message = ('Sorry, something went wrong. CusDeb team has been '
-               'informed about the situation.')
+    message = """Hello!
+
+Unfortunatelly, something went wrong. We'll try to investigate and fix. We'll let you know once fixed.
+
+Sencerely,
+CusDeb Team
+
+
+We rely on your donations for building and supporting FREE CusDeb features.
+PayPal: https://www.paypal.me/cusdeb
+BTC: 1Nc3MXdoPpxy9CDcXBXza5kbTJGasF1wfE
+ETH: 0xC50FE2537bfeB2Cf784E3fcEda43829dF9d122f3
+"""
 
     if user.userprofile.email_notifications:
         try:
