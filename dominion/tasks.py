@@ -14,8 +14,8 @@
 
 import os
 import shutil
-import subprocess
 import tarfile
+from subprocess import Popen
 
 import redis
 from celery import Celery, bootsteps
@@ -37,7 +37,7 @@ APP.user_options['worker'].add(Option(
 APP.user_options['worker'].add(Option(
     '--builder-location',
     dest='builder_location',
-    default='/var/dominion/rpi23-gen-image',
+    default='/var/dominion/pieman',
     help='')
 )
 APP.user_options['worker'].add(Option(
@@ -92,19 +92,7 @@ APP.steps['worker'].add(ConfigBootstep)
 
 @APP.task(name='tasks.build')
 def build(user_id, image):
-    build_id = image.get('id', None)
-    packages_list = image.get('selected_packages', None)
-    if packages_list is None:
-        packages_list = []
-    root_password = image.get('root_password', None)
-    users = image.get('users', None)
-    target = image.get('target', None)
-    configuration = image.get('configuration', None)
-    suite = routines.get_suite_name(target['distro'])
-    base_system = os.path.join(APP.conf.get('BASE_SYSTEMS'), suite + '-armhf')
-    builder_location = APP.conf.get('BUILDER_LOCATION', './pieman')
     workspace = APP.conf.get('WORKSPACE')
-    target_dir = '{}/{}'.format(workspace, build_id)
 
     redis_host = APP.conf.get('REDIS_HOST')
     redis_port = APP.conf.get('REDIS_PORT')
@@ -118,9 +106,10 @@ def build(user_id, image):
         # We cannot notify the user here.
         return BUILD_FAILED
 
+    build_id = image.get('id', None)
     if not build_id:
-        LOGGER.critical('There is no build id {} for user {}'.format(build_id,
-                                                                     user_id))
+        LOGGER.critical('There is no build id {} '
+                        'for user {}'.format(build_id, user_id))
         routines.notify_us_on_fail(user_id, image)
         routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
@@ -131,43 +120,71 @@ def build(user_id, image):
         routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
-    build_log_file = '{}.log'.format(target_dir)
-    routines.touch(build_log_file)
-    routines.write(build_log_file, 'Starting build task...')
-
-    includes = ','.join(packages_list) if packages_list else ''
+    # Create the build script process environment
     env = {
         'PATH': os.environ['PATH'],
-        'BASE_DIR': base_system,
-        'INCLUDES': includes,
-        'PIEMAN_PATH': builder_location,
+        'PIEMAN_PATH': APP.conf.get('BUILDER_LOCATION', './pieman'),
+        'ALLOW_UNAUTHENTICATED': 'true',
         'PROJECT_NAME': build_id,
         'TERM': 'linux',
+        'WORKSPACE': workspace,
     }
+    target_dir = '{}/{}'.format(workspace, build_id)
+    build_log_file = '{}.log'.format(target_dir)
+    routines.touch(build_log_file)
 
+    #
+    # Base parameters
+    #
+
+    target = image.get('target', None)
+    if target:
+        device = target.get('device', None)
+        if device:
+            env['DEVICE'] = routines.get_device_name(device)
+
+        distro = target.get('distro', None)
+        if distro:
+            env['OS'] = routines.get_os_name(distro)
+
+    if env.get('OS', None):
+        env['BASE_DIR'] = os.path.join(APP.conf.get('BASE_SYSTEMS'), env['OS'])
+
+    #
+    # Package manager
+    #
+
+    packages_list = image.get('selected_packages', None)
+    if packages_list:
+        env['INCLUDES'] = ','.join(packages_list) if packages_list else '',
+
+    #
+    # Users
+    #
+
+    root_password = image.get('root_password', None)
     if root_password:
         env['ENABLE_ROOT'] = 'true'
         env['PASSWORD'] = root_password
 
-    if target:
-        model = '3' if target['device'] == 'Raspberry Pi 3' else '2'
-        env['RELEASE'] = suite
-        env['RPI_MODEL'] = model
-
+    users = image.get('users', None)
     if users:
-        # rpi23-gen-image can't work with multiple users
+        # Pieman can't work with multiple users so far
         env['ENABLE_USER'] = 'true'
         env['USER_NAME'] = users[0]['username']
         env['USER_PASSWORD'] = users[0]['password']
 
+    #
+    # Unsorted parameters
+    #
+
+    configuration = image.get('configuration', None)
     if configuration:
         allowed = [
             'HOSTNAME',
             'TIMEZONE',
         ]
-        configuration = \
-            {k: v for k, v in configuration.items() if k in allowed}
-        env.update(configuration)
+        env.update({k: v for k, v in configuration.items() if k in allowed})
 
     firmware.status = Firmware.BUILDING
     firmware.save()
@@ -175,30 +192,21 @@ def build(user_id, image):
     routines.write(build_log_file, 'Running build script...')
     with open(build_log_file, 'a') as output:
         command_line = ['sh', 'run.sh']
-        proc = subprocess.Popen(command_line, env=env, stdout=output,
-                                stderr=output)
+        proc = Popen(command_line, env=env, stdout=output, stderr=output)
 
     ret_code = proc.wait()
-    shutil.rmtree(target_dir)  # cleaning up
-
     if ret_code == 0:
-        os.chdir(workspace)
-        with tarfile.open(build_id + '.tar.gz', 'w:gz') as tar:
-            for name in [build_id + '.img', build_id + '.bmap', ]:
-                tar.add(name)
-
-        os.remove(build_id + '.img')
-        os.remove(build_id + '.bmap')
+        redis_conn.decr(BUILDS_NUMBER_KEY)
 
         firmware.status = Firmware.DONE
         firmware.save()
-        redis_conn.decr(BUILDS_NUMBER_KEY)
         routines.notify_user_on_success(user, image)
     else:
+        redis_conn.decr(BUILDS_NUMBER_KEY)
+
         LOGGER.critical('Build failed: {}'.format(build_id))
         firmware.status = Firmware.FAILED
         firmware.save()
-        redis_conn.decr(BUILDS_NUMBER_KEY)
         routines.notify_us_on_fail(user_id, image, build_log_file)
         routines.notify_user_on_fail(user, image)
 

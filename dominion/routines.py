@@ -25,14 +25,29 @@ from users.models import User
 
 LOGGER = get_task_logger(__name__)
 
-VALID_SUITES = {
-    'Debian Jessie': 'jessie',
-    'Debian Stretch': 'stretch',
+VALID_DEVICES_NAMES = {
+    'Raspberry Pi Model B and B+': 'rpi-b',
+    'Raspberry Pi 2 Model B': 'rpi-2-b',
+    'Raspberry Pi 3 Model B': 'rpi-3-b',
+    'Raspberry Pi Zero': 'rpi-zero',
+}
+
+VALID_OS_NAMES= {
+    'Raspbian 9 "Stretch" (32-bit)': 'raspbian-stretch-armhf',
+    'Ubuntu 16.04 "Xenial Xerus" (32-bit)': 'ubuntu-xenial-armhf',
+    'Ubuntu 17.10 "Artful Aardvark" (64-bit)': 'ubuntu-artful-arm64',
 }
 
 
-class SuiteDoesNotSupport(Exception):
-    """Exception raised by the get_suite_name function if the specified suite
+class DeviceNameDoesNotExist(Exception):
+    """Exception raised by the get_device_name function if the specified suite
+    is not valid.
+    """
+    pass
+
+
+class OsNameDoesNotExist(Exception):
+    """Exception raised by the get_os_name function if the specified suite
     is not valid.
     """
     pass
@@ -68,12 +83,18 @@ def get_firmware(build_id, user):
         return None
 
 
-# XXX: copy-pasted from BM. Need to share it in the future.
-def get_suite_name(distro):
-    if distro in VALID_SUITES.keys():
-        return VALID_SUITES[distro]
+def get_device_name(distro):
+    if distro in VALID_DEVICES_NAMES.keys():
+        return VALID_DEVICES_NAMES[distro]
     else:
-        raise SuiteDoesNotSupport
+        raise DeviceNameDoesNotExist
+
+
+def get_os_name(distro):
+    if distro in VALID_OS_NAMES.keys():
+        return VALID_OS_NAMES[distro]
+    else:
+        raise OsNameDoesNotExist
 
 
 def notify_user_on_success(user, image):
