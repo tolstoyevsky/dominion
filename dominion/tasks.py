@@ -181,8 +181,8 @@ def build(user_id, image):
     configuration = image.get('configuration', None)
     if configuration:
         allowed = [
-            'HOSTNAME',
-            'TIMEZONE',
+            'HOST_NAME',
+            'TIME_ZONE',
         ]
         env.update({k: v for k, v in configuration.items() if k in allowed})
 
