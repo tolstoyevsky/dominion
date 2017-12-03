@@ -156,7 +156,7 @@ def build(user_id, image):
 
     packages_list = image.get('selected_packages', None)
     if packages_list:
-        env['INCLUDES'] = ','.join(packages_list) if packages_list else '',
+        env['INCLUDES'] = ','.join(packages_list) if packages_list else ''
 
     #
     # Users
