@@ -121,12 +121,15 @@ ETH: 0xC50FE2537bfeB2Cf784E3fcEda43829dF9d122f3
             LOGGER.error('Unable to send email: {}'.format(e))
 
 
-def notify_user_on_fail(user, image):
+def notify_user_on_fail(user, image, attachment=False):
     distro = image.get('target', {}).get('distro', 'Image')
     subject = '{} build has failed!'.format(distro)
     message = """Hello!
 
-Unfortunatelly, something went wrong. We'll try to investigate and fix. We'll let you know once fixed.
+Unfortunatelly, something went wrong while building your image using Pieman.
+We attached log to this email. We would really appreciate if you check the log and
+create an issue on GitHub:
+https://github.com/tolstoyevsky/pieman/issues
 
 Sencerely,
 CusDeb Team
@@ -139,10 +142,18 @@ ETH: 0xC50FE2537bfeB2Cf784E3fcEda43829dF9d122f3
 """
 
     if user.userprofile.email_notifications:
+        email = EmailMessage(
+            subject,
+            message,
+            'noreply@cusdeb.com',
+            [user.email],
+        )
+        if attachment:
+            email.attach_file(attachment)
         try:
-            user.email_user(subject, message)
+            email.send()
         except smtplib.SMTPException as e:
-            LOGGER.error('Unable to send email: {}'.format(e))
+            LOGGER.error('Unable to send email to info@cusdeb.com: {}'.format(e))
 
 
 def notify_us_on_fail(user_id, image, attachment=False):

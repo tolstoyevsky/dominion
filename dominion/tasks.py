@@ -208,6 +208,6 @@ def build(user_id, image):
         firmware.status = Firmware.FAILED
         firmware.save()
         routines.notify_us_on_fail(user_id, image, build_log_file)
-        routines.notify_user_on_fail(user, image)
+        routines.notify_user_on_fail(user, image, build_log_file)
 
     return ret_code
