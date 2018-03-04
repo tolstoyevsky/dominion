@@ -35,6 +35,7 @@ VALID_DEVICES_NAMES = {
 VALID_OS_NAMES= {
     'Raspbian 9 "Stretch" (32-bit)': 'raspbian-stretch-armhf',
     'Ubuntu 16.04 "Xenial Xerus" (32-bit)': 'ubuntu-xenial-armhf',
+    'Ubuntu 17.10 "Artful Aardvark" (32-bit)': 'ubuntu-artful-armhf',
     'Ubuntu 17.10 "Artful Aardvark" (64-bit)': 'ubuntu-artful-arm64',
 }
 
