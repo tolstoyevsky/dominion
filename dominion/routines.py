@@ -37,6 +37,7 @@ VALID_OS_NAMES= {
     'Ubuntu 16.04 "Xenial Xerus" (32-bit)': 'ubuntu-xenial-armhf',
     'Ubuntu 17.10 "Artful Aardvark" (32-bit)': 'ubuntu-artful-armhf',
     'Ubuntu 17.10 "Artful Aardvark" (64-bit)': 'ubuntu-artful-arm64',
+    'Devuan 1 "Jessie" (32-bit)': 'devuan-jessie-armhf',
 }
 
 
