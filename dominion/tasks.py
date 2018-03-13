@@ -124,6 +124,7 @@ def build(user_id, image):
     env = {
         'PATH': os.environ['PATH'],
         'PIEMAN_PATH': APP.conf.get('BUILDER_LOCATION', './pieman'),
+        'ENABLE_UNATTENDED_INSTALLATION': 'true',
         'PROJECT_NAME': build_id,
         'TERM': 'linux',
         'WORKSPACE': workspace,
