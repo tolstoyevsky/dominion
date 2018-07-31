@@ -4,4 +4,4 @@ psycopg2
 
 -e git+ssh://git@bitbucket.org/cusdeb/django-cusdeb-firmwares.git#egg=django-cusdeb-firmwares
 -e git+ssh://git@bitbucket.org/cusdeb/django-cusdeb-users.git#egg=django-cusdeb-users
--e git+ssh://git@bitbucket.org/cusdeb/shirow.git#egg=shirow
+-e git+https://github.com/tolstoyevsky/shirow.git#egg=shirow
