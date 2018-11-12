@@ -128,6 +128,7 @@ def build(user_id, image):
         'PROJECT_NAME': build_id,
         'TERM': 'linux',
         'WORKSPACE': workspace,
+        'COMPRESS_WITH_GZIP': true
     }
     target_dir = '{}/{}'.format(workspace, build_id)
     build_log_file = '{}.log'.format(target_dir)
