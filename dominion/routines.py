@@ -108,12 +108,6 @@ Your image is ready. Please, download it using the following link: https://cusde
 
 Sencerely,
 CusDeb Team
-
-
-We rely on your donations for building and supporting FREE CusDeb features.
-PayPal: https://www.paypal.me/cusdeb
-BTC: 1Nc3MXdoPpxy9CDcXBXza5kbTJGasF1wfE
-ETH: 0xC50FE2537bfeB2Cf784E3fcEda43829dF9d122f3
 """.format(image.get('id'))
 
     if user.userprofile.email_notifications:
@@ -135,12 +129,6 @@ https://github.com/tolstoyevsky/pieman/issues
 
 Sencerely,
 CusDeb Team
-
-
-We rely on your donations for building and supporting FREE CusDeb features.
-PayPal: https://www.paypal.me/cusdeb
-BTC: 1Nc3MXdoPpxy9CDcXBXza5kbTJGasF1wfE
-ETH: 0xC50FE2537bfeB2Cf784E3fcEda43829dF9d122f3
 """
 
     if user.userprofile.email_notifications:
