@@ -106,7 +106,7 @@ def notify_user_on_success(user, image):
 
 Your image is ready. Please, download it using the following link: https://cusdeb.com/download/{}
 
-Sencerely,
+Sincerely,
 CusDeb Team
 """.format(image.get('id'))
 
@@ -127,7 +127,7 @@ We attached log to this email. We would really appreciate if you check the log a
 create an issue on GitHub:
 https://github.com/tolstoyevsky/pieman/issues
 
-Sencerely,
+Sincerely,
 CusDeb Team
 """
 
