@@ -2,6 +2,6 @@ celery==3.*
 django==1.8.*
 psycopg2
 
--e git+ssh://git@bitbucket.org/cusdeb/django-cusdeb-firmwares.git#egg=django-cusdeb-firmwares
+-e git+https://github.com/tolstoyevsky/django-cusdeb-firmwares.git#egg=django-cusdeb-firmwares
 -e git+ssh://git@bitbucket.org/cusdeb/django-cusdeb-users.git#egg=django-cusdeb-users
 -e git+https://github.com/tolstoyevsky/shirow.git#egg=shirow
