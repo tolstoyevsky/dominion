@@ -60,6 +60,9 @@ APP.user_options['worker'].add(Option(
 BUILD_FAILED = 1
 BUILDS_NUMBER_KEY = 'builds_number'
 LOGGER = get_task_logger(__name__)
+MAX_ALLOWED_ROOTFS_SIZE = 1000
+MENDER_COMPATIBLE_IMAGE = 2
+MENDER_ARTIFACT = 3
 
 
 class ConfigBootstep(bootsteps.Step):
@@ -128,7 +131,6 @@ def build(user_id, image):
         'PROJECT_NAME': build_id,
         'TERM': 'linux',
         'WORKSPACE': workspace,
-        'COMPRESS_WITH_GZIP': 'true',
     }
     target_dir = '{}/{}'.format(workspace, build_id)
     build_log_file = '{}.log'.format(target_dir)
@@ -150,6 +152,20 @@ def build(user_id, image):
 
     if env.get('OS', None):
         env['BASE_DIR'] = os.path.join(APP.conf.get('BASE_SYSTEMS'), env['OS'])
+
+    #
+    # Build type
+    #
+    
+    build_type = image.get('build_type', None)
+    if build_type:
+        if build_type == MENDER_COMPATIBLE_IMAGE:
+            env['ENABLE_MENDER'] = 'true'
+            env['COMPRESS_WITH_GZIP'] = 'true'
+        elif build_type == MENDER_ARTIFACT:
+            env['CREATE_ONLY_MENDER_ARTIFACT'] = 'true'
+        else:
+            env['COMPRESS_WITH_GZIP'] = 'true'
 
     #
     # Package manager
@@ -183,9 +199,56 @@ def build(user_id, image):
     if configuration:
         allowed = [
             'HOST_NAME',
+            'IMAGE_ROOTFS_SIZE',
+            'MENDER_ARTIFACT_NAME',
+            'MENDER_DATA_SIZE',
+            'MENDER_INVENTORY_POLL_INTERVAL',
+            'MENDER_RETRY_POLL_INTERVAL',
+            'MENDER_SERVER_URL',
+            'MENDER_TENANT_TOKEN',
+            'MENDER_UPDATE_POLL_INTERVAL'
             'TIME_ZONE',
         ]
         env.update({k: v for k, v in configuration.items() if k in allowed})
+
+        try:
+            image_rootfs_size = int(env.get('IMAGE_ROOTFS_SIZE', 0))
+            mender_data_size = int(env.get('MENDER_DATA_SIZE', 0))
+            mender_inventory_poll_interval = int(env.get(
+                'MENDER_INVENTORY_POLL_INTERVAL', 0))
+            mender_retry_poll_interval = int(env.get(
+                'MENDER_RETRY_POLL_INTERVAL', 0))
+            mender_update_poll_interval = int(env.get(
+                'MENDER_UPDATE_POLL_INTERVAL', 0))
+        except ValueError:
+            routines.notify_us_on_fail(user_id, image)
+            routines.notify_user_on_fail(user, image)
+            return BUILD_FAILED
+
+        if image_rootfs_size > MAX_ALLOWED_ROOTFS_SIZE or image_rootfs_size < 0:
+            routines.notify_us_on_fail(user_id, image)
+            routines.notify_user_on_fail(user, image)
+            return BUILD_FAILED
+
+        if mender_data_size > MAX_ALLOWED_ROOTFS_SIZE or mender_data_size < 0:
+            routines.notify_us_on_fail(user_id, image)
+            routines.notify_user_on_fail(user, image)
+            return BUILD_FAILED
+
+        if mender_inventory_poll_interval < 0:
+            routines.notify_us_on_fail(user_id, image)
+            routines.notify_user_on_fail(user, image)
+            return BUILD_FAILED
+
+        if mender_retry_poll_interval < 0:
+            routines.notify_us_on_fail(user_id, image)
+            routines.notify_user_on_fail(user, image)
+            return BUILD_FAILED
+
+        if mender_update_poll_interval < 0:
+            routines.notify_us_on_fail(user_id, image)
+            routines.notify_user_on_fail(user, image)
+            return BUILD_FAILED    
 
     firmware.status = Firmware.BUILDING
     firmware.save()
