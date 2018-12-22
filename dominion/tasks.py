@@ -206,7 +206,7 @@ def build(user_id, image):
             'MENDER_RETRY_POLL_INTERVAL',
             'MENDER_SERVER_URL',
             'MENDER_TENANT_TOKEN',
-            'MENDER_UPDATE_POLL_INTERVAL'
+            'MENDER_UPDATE_POLL_INTERVAL',
             'TIME_ZONE',
         ]
         env.update({k: v for k, v in configuration.items() if k in allowed})
