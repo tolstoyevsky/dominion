@@ -105,20 +105,22 @@ def build(user_id, image):
 
     user = routines.get_user(user_id)
     if not user:
+        LOGGER.critical('User id {} not found'.format(user_id))
         routines.notify_us_on_fail(user_id, image)
         # We cannot notify the user here.
         return BUILD_FAILED
 
     build_id = image.get('id', None)
     if not build_id:
-        LOGGER.critical('There is no build id {} '
-                        'for user {}'.format(build_id, user_id))
+        LOGGER.critical('There is no id')
         routines.notify_us_on_fail(user_id, image)
         routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
 
     firmware = routines.get_firmware(build_id, user)
     if not firmware:
+        LOGGER.critical('There is no build id {} '
+                        'for user id {}'.format(build_id, user_id))
         routines.notify_us_on_fail(user_id, image)
         routines.notify_user_on_fail(user, image)
         return BUILD_FAILED
@@ -220,32 +222,41 @@ def build(user_id, image):
                 'MENDER_RETRY_POLL_INTERVAL', 0))
             mender_update_poll_interval = int(env.get(
                 'MENDER_UPDATE_POLL_INTERVAL', 0))
-        except ValueError:
+        except ValueError, e:
+            LOGGER.error('Unable to convert parameters to int: ' + str(e))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
             return BUILD_FAILED
 
         if image_rootfs_size > MAX_ALLOWED_ROOTFS_SIZE or image_rootfs_size < 0:
+            LOGGER.error('Incorrect rootfs size {}'.format(image_rootfs_size))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
             return BUILD_FAILED
 
         if mender_data_size > MAX_ALLOWED_ROOTFS_SIZE or mender_data_size < 0:
+            LOGGER.error('Incorrect mender data size {}'.format(mender_data_size))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
             return BUILD_FAILED
 
         if mender_inventory_poll_interval < 0:
+            LOGGER.error('Incorrect mender inventory poll '
+                         'interval {}'.format(mender_inventory_poll_interval))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
             return BUILD_FAILED
 
         if mender_retry_poll_interval < 0:
+            LOGGER.error('Incorrect mender retry poll '
+                         'interval {}'.format(mender_retry_poll_interval))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
             return BUILD_FAILED
 
         if mender_update_poll_interval < 0:
+            LOGGER.error('Incorrect mender update poll '
+                         'interval {}'.format(mender_update_poll_interval))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
             return BUILD_FAILED    
@@ -268,7 +279,7 @@ def build(user_id, image):
     else:
         redis_conn.decr(BUILDS_NUMBER_KEY)
 
-        LOGGER.critical('Build failed: {}'.format(build_id))
+        LOGGER.error('Build failed: {}'.format(build_id))
         firmware.status = Firmware.FAILED
         firmware.save()
         routines.notify_us_on_fail(user_id, image, build_log_file)
