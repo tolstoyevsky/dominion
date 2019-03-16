@@ -34,12 +34,12 @@ VALID_DEVICES_NAMES = {
 }
 
 VALID_OS_NAMES= {
-    'Debian 10 "Buster" (32-bit)': 'debian-buster-armhf',
-    'Devuan 1 "Jessie" (32-bit)': 'devuan-jessie-armhf',
     'Raspbian 9 "Stretch" (32-bit)': 'raspbian-stretch-armhf',
     'Ubuntu 16.04 "Xenial Xerus" (32-bit)': 'ubuntu-xenial-armhf',
     'Ubuntu 18.04 "Bionic Beaver" (32-bit)': 'ubuntu-bionic-armhf',
     'Ubuntu 18.04 "Bionic Beaver" (64-bit)': 'ubuntu-bionic-arm64',
+    'Devuan 1 "Jessie" (32-bit)': 'devuan-jessie-armhf',
+    'Debian 10 "Buster" (32-bit)': 'debian-buster-armhf',
 }
 
 
