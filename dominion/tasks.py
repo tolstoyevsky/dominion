@@ -222,7 +222,7 @@ def build(user_id, image):
                 'MENDER_RETRY_POLL_INTERVAL', 0))
             mender_update_poll_interval = int(env.get(
                 'MENDER_UPDATE_POLL_INTERVAL', 0))
-        except ValueError, e:
+        except ValueError as e:
             LOGGER.error('Unable to convert parameters to int: ' + str(e))
             routines.notify_us_on_fail(user_id, image)
             routines.notify_user_on_fail(user, image)
