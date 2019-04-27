@@ -27,6 +27,7 @@ LOGGER = get_task_logger(__name__)
 
 VALID_DEVICES_NAMES = {
     'Orange Pi PC Plus': 'opi-pc-plus',
+    'Orange Pi Zero': 'opi-zero',
     'Raspberry Pi Model B and B+': 'rpi-b',
     'Raspberry Pi 2 Model B': 'rpi-2-b',
     'Raspberry Pi 3 Model B': 'rpi-3-b',
