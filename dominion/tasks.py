@@ -133,10 +133,20 @@ def build(user_id, image):
         'PROJECT_NAME': build_id,
         'TERM': 'linux',
         'WORKSPACE': workspace,
+        'XFCE4': 'false',
     }
     target_dir = '{}/{}'.format(workspace, build_id)
     build_log_file = '{}.log'.format(target_dir)
     routines.touch(build_log_file)
+
+    #
+    # XFCE4 option
+    #
+    xfce4 = image.get('xfce4', 'false')
+    if xfce4:
+        env['XFCE4'] = 'true'
+    else:
+        env['XFCE4'] = 'false'
 
     #
     # Base parameters
@@ -154,6 +164,9 @@ def build(user_id, image):
 
     if env.get('OS', None):
         env['BASE_DIR'] = os.path.join(APP.conf.get('BASE_SYSTEMS'), env['OS'])
+
+    if env['XFCE4'] == 'true':
+        env['BASE_DIR'] = os.path.join(APP.conf.get('BASE_SYSTEMS'), env['OS'] + '-xfce4')
 
     #
     # Build type
