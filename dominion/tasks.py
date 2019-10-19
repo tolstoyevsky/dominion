@@ -215,6 +215,7 @@ def build(user_id, image):
         allowed = [
             'HOST_NAME',
             'IMAGE_ROOTFS_SIZE',
+            'ENABLE_WIRELESS',
             'MENDER_ARTIFACT_NAME',
             'MENDER_DATA_SIZE',
             'MENDER_INVENTORY_POLL_INTERVAL',
@@ -223,6 +224,8 @@ def build(user_id, image):
             'MENDER_TENANT_TOKEN',
             'MENDER_UPDATE_POLL_INTERVAL',
             'TIME_ZONE',
+            'WPA_SSID',
+            'WPA_PSK',
         ]
         env.update({k: v for k, v in configuration.items() if k in allowed})
 
