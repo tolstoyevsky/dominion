@@ -35,7 +35,7 @@ VALID_DEVICES_NAMES = {
 }
 
 VALID_OS_NAMES= {
-    'Raspbian 9 "Stretch" (32-bit)': 'raspbian-stretch-armhf',
+    'Raspbian 10 "Buster" (32-bit)': 'raspbian-buster-armhf',
     'Ubuntu 16.04 "Xenial Xerus" (32-bit)': 'ubuntu-xenial-armhf',
     'Ubuntu 18.04 "Bionic Beaver" (32-bit)': 'ubuntu-bionic-armhf',
     'Ubuntu 18.04 "Bionic Beaver" (64-bit)': 'ubuntu-bionic-arm64',
