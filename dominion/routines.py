@@ -31,6 +31,7 @@ VALID_DEVICES_NAMES = {
     'Raspberry Pi Model B and B+': 'rpi-b',
     'Raspberry Pi 2 Model B': 'rpi-2-b',
     'Raspberry Pi 3 Model B': 'rpi-3-b',
+    'Raspberry Pi 4 Model B': 'rpi-4-b',
     'Raspberry Pi Zero': 'rpi-zero',
 }
 
