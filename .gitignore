@@ -1,7 +1,5 @@
 .idea
 __pycache__
-bundles
 dist
 settings/dev.py
 dominion.egg-info
-node_modules
