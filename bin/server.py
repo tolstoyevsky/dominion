@@ -37,12 +37,13 @@ class Application(tornado.web.Application):
         handlers = [
             (r'/dominion/token/' + TOKEN_PATTERN, Dominion),
         ]
-        tornado.web.Application.__init__(self, handlers)
+        super().__init__(handlers)
 
 
 class Dominion(RPCServer):
     def __init__(self, application, request, **kwargs):
-        RPCServer.__init__(self, application, request, **kwargs)
+        super().__init__(application, request, **kwargs)
+
         self._fd = None
         self._pid = None
 
