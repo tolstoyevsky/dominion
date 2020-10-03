@@ -25,8 +25,7 @@ from shirow.ioloop import IOLoop
 from shirow.server import RPCServer, TOKEN_PATTERN, remote
 from tornado.options import define, options
 
-define('build_log_dir',
-       help='The path to the directory which contains build logs',
+define('build_log_dir', help='The path to the directory which contains build logs',
        default='/tmp/dominion')
 
 BUF_SIZE = 65536
@@ -72,8 +71,7 @@ class Dominion(RPCServer):
 
                 request.ret_and_continue(data.decode('utf8'))
 
-            self.io_loop.add_handler(self._fd, build_log_handler,
-                                     self.io_loop.READ)
+            self.io_loop.add_handler(self._fd, build_log_handler, self.io_loop.READ)
 
             # The parent process finishes not waiting for the child.
             # The child process becomes a zombie.
