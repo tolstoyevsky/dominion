@@ -55,7 +55,7 @@ class Dominion(RPCServer):
             os.kill(self._pid, signal.SIGKILL)  # kill zombie process
 
     @remote
-    def get_rt_build_log(self, request, build_id):
+    async def get_rt_build_log(self, request, build_id):
         build_log = os.path.join(options.build_log_dir, '{}.log'.format(build_id))
         Path(build_log).touch()
 
