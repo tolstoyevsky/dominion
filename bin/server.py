@@ -63,7 +63,7 @@ class Dominion(RPCServer):
             command_line = ['echo', 'Hello, World!', ]
             os.execvp(command_line[0], command_line)
         else:  # parent
-            def build_log_handler(*args, **kwargs):
+            def build_log_handler(*_args, **_kwargs):
                 try:
                     data = os.read(self._fd, BUF_SIZE)
                 except OSError:
