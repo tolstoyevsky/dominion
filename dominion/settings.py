@@ -28,3 +28,17 @@ EMAIL_USE_SSL = bool(os.environ.get('EMAIL_USE_SSL', True))
 
 # Do not run anything if SECRET_KEY is not set.
 SECRET_KEY = os.environ['SECRET_KEY']
+
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', '127.0.0.1')
+
+RABBITMQ_PORT = os.getenv('RABBITMQ_PORT', '5672')
+
+CELERY_BEAT_SCHEDULE = {
+    'kick-off-build': {
+        'task': 'dominion.tasks.build',
+        'schedule': 5,
+        'options': {'queue': 'build'},
+    },
+}
+
+CELERY_BROKER_URL = f'amqp://guest:guest@{RABBITMQ_HOST}:{RABBITMQ_PORT}//'
