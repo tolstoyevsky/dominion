@@ -1,6 +1,5 @@
 import os
 
-from settings.defaults import *
 
 DEBUG = False
 
