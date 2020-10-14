@@ -3,6 +3,9 @@ import os
 
 DEBUG = False
 
+# Do not run anything if SECRET_KEY is not set.
+SECRET_KEY = os.environ['SECRET_KEY']
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -25,9 +28,6 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 EMAIL_USE_SSL = bool(os.environ.get('EMAIL_USE_SSL', True))
-
-# Do not run anything if SECRET_KEY is not set.
-SECRET_KEY = os.environ['SECRET_KEY']
 
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', '127.0.0.1')
 
