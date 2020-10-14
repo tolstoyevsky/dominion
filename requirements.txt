@@ -1,4 +1,4 @@
-celery==3.*
+celery==5.0.*
 django==1.8.*
 psycopg2
 
