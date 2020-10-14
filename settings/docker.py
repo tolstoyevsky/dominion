@@ -26,3 +26,6 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 EMAIL_USE_SSL = bool(os.environ.get('EMAIL_USE_SSL', True))
+
+# Do not run anything if SECRET_KEY is not set.
+SECRET_KEY = os.environ['SECRET_KEY']
