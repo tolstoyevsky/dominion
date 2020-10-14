@@ -2,3 +2,6 @@
 __pycache__
 dist
 dominion.egg-info
+*.bak
+*.dat
+*.dir
