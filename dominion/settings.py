@@ -33,11 +33,13 @@ RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', '127.0.0.1')
 
 RABBITMQ_PORT = os.getenv('RABBITMQ_PORT', '5672')
 
+QUEUE_NAME = 'build'
+
 CELERY_BEAT_SCHEDULE = {
     'kick-off-build': {
-        'task': 'dominion.tasks.build',
+        'task': 'dominion.tasks.spawn_builds',
         'schedule': 5,
-        'options': {'queue': 'build'},
+        'options': {'queue': QUEUE_NAME},
     },
 }
 
