@@ -12,20 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-from dominion.app import APP
-from dominion.base import BaseBuildTask
-from dominion.settings import QUEUE_NAME
+from celery import Task
 
 
-@APP.task(bind=True, base=BaseBuildTask)
-def build(_self):
-    """Builds an image. """
+class BaseBuildTask(Task):
+    """Base class for the build task.
+    The primary goal of the class is to make it possible to maintain the 'success' and 'failure'
+    handlers outside of the build task.
+    """
 
-    print('Stub')
+    def on_success(self, retval, task_id, args, kwargs):
+        """Invoked when a task succeeds. """
 
+        print('Success')
 
-@APP.task
-def spawn_builds():
-    """Spawns the 'build' tasks. """
+    def on_failure(self, exc, task_id, args, kwargs, _info):
+        """Invoked when task fails. """
 
-    build.apply_async((), queue=QUEUE_NAME)
+        print('Fail')
