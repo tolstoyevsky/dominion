@@ -13,6 +13,11 @@
 # limitations under the License
 
 from celery import Task
+from celery.utils.log import get_task_logger
+
+from images.models import Image
+
+LOGGER = get_task_logger(__name__)
 
 
 class BaseBuildTask(Task):
@@ -24,9 +29,17 @@ class BaseBuildTask(Task):
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """
 
-        print('Success')
+        image_id = args.pop()
+        image = Image.objects.get(image_id=image_id)
+        image.change_status_to(Image.SUCCEEDED)
+        image.set_finished_at()
+        LOGGER.info(f'{image_id} succeeded')
 
     def on_failure(self, exc, task_id, args, kwargs, _info):
         """Invoked when task fails. """
 
-        print('Fail')
+        image_id = args.pop()
+        image = Image.objects.get(image_id=image_id)
+        image.change_status_to(Image.FAILED)
+        image.set_finished_at()
+        LOGGER.info(f'{image_id} failed')

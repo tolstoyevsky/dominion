@@ -12,20 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+from celery.utils.log import get_task_logger
 from dominion.app import APP
 from dominion.base import BaseBuildTask
 from dominion.settings import QUEUE_NAME
+from images.models import Image
+
+LOGGER = get_task_logger(__name__)
 
 
 @APP.task(bind=True, base=BaseBuildTask)
-def build(_self):
+def build(self, image_id):
     """Builds an image. """
 
-    print('Stub')
+    self.request.image_id = image_id
+    LOGGER.info(f'Building {image_id}')
 
 
 @APP.task
 def spawn_builds():
     """Spawns the 'build' tasks. """
 
-    build.apply_async((), queue=QUEUE_NAME)
+    image = Image.objects.get_any()
+    if image:
+        image.set_started_at()
+        build.apply_async((image.image_id, ), queue=QUEUE_NAME)
