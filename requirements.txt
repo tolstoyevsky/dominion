@@ -1,5 +1,5 @@
 celery==5.0.*
-django==1.8.*
+Django==2.2.*
 psycopg2
 
 -e git+https://github.com/tolstoyevsky/shirow.git#egg=shirow
