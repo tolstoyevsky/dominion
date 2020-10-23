@@ -17,6 +17,13 @@ DATABASES = {
     }
 }
 
+INSTALLED_APPS = [
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+
+    'images',
+]
+
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
