@@ -15,6 +15,7 @@
 from celery import Task
 
 from dominion.app import APP
+from dominion.settings import QUEUE_NAME
 
 
 class BaseBuildTask(Task):
@@ -39,3 +40,10 @@ def build(_self):
     """Builds an image. """
 
     print('Stub')
+
+
+@APP.task
+def spawn_builds():
+    """Spawns the 'build' tasks. """
+
+    build.apply_async((), queue=QUEUE_NAME)
