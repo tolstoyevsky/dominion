@@ -15,7 +15,7 @@
 from celery.utils.log import get_task_logger
 from dominion.app import APP
 from dominion.base import BaseBuildTask
-from dominion.settings import QUEUE_NAME
+from dominion.settings import QUEUE_BUILD_NAME
 from images.models import Image
 
 LOGGER = get_task_logger(__name__)
@@ -36,4 +36,4 @@ def spawn_builds():
     image = Image.objects.get_any()
     if image:
         image.set_started_at()
-        build.apply_async((image.image_id, ), queue=QUEUE_NAME)
+        build.apply_async((image.image_id, ), queue=QUEUE_BUILD_NAME)
