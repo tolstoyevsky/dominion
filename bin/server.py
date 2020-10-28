@@ -16,7 +16,6 @@
 import os
 import pty
 import signal
-from pathlib import Path
 
 import tornado.options
 import tornado.web
@@ -55,9 +54,6 @@ class Dominion(RPCServer):
 
     @remote
     async def get_rt_build_log(self, request, build_id):
-        build_log = os.path.join(options.build_log_dir, '{}.log'.format(build_id))
-        Path(build_log).touch()
-
         self._pid, self._fd = pty.fork()
         if self._pid == 0:  # child
             command_line = ['echo', 'Hello, World!', ]
