@@ -14,9 +14,11 @@
 
 from celery.utils.log import get_task_logger
 from dominion.app import APP
-from dominion.base import BaseBuildTask
+from dominion.base import DOCKER_CLIENT, BaseBuildTask
 from dominion.settings import QUEUE_BUILD_NAME
 from images.models import Image
+
+from dominion.util import connect_to_redis, terminalize
 
 LOGGER = get_task_logger(__name__)
 
@@ -25,8 +27,18 @@ LOGGER = get_task_logger(__name__)
 def build(self, image_id):
     """Builds an image. """
 
-    self.request.image_id = image_id
-    LOGGER.info(f'Building {image_id}')
+    self._container_name = f'pieman-{image_id}'
+    self._image_id = image_id
+
+    LOGGER.info(f'Start building {image_id}')
+
+    channel_name = f'build-log-{image_id}'
+    conn = connect_to_redis()
+    container = DOCKER_CLIENT.containers.run('count-von-count',
+                                             detach=True, name=self._container_name,
+                                             environment={'TERM': 'xterm'})
+    for line in container.logs(follow=True, stream=True):
+        conn.publish(channel_name, terminalize(line))
 
 
 @APP.task
