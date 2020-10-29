@@ -40,6 +40,10 @@ RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', '127.0.0.1')
 
 RABBITMQ_PORT = os.getenv('RABBITMQ_PORT', '5672')
 
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+
+REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
+
 QUEUE_BEAT_NAME = 'beat'
 
 QUEUE_BUILD_NAME = 'build'
