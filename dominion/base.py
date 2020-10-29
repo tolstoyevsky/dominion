@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+import docker
 from celery import Task
 from celery.utils.log import get_task_logger
+from docker.errors import DockerException
 
 from images.models import Image
+
+DOCKER_CLIENT = docker.from_env()
 
 LOGGER = get_task_logger(__name__)
 
@@ -26,20 +30,36 @@ class BaseBuildTask(Task):
     handlers outside of the build task.
     """
 
+    def __init__(self):
+        super().__init__()
+
+        self._container_name = self._image_id = None
+
+    def _remove_container(self):
+        try:
+            container = DOCKER_CLIENT.containers.get(self._container_name)
+            container.remove()
+        except DockerException:
+            """There is nothing to do. """
+
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """
 
-        image_id = args.pop()
-        image = Image.objects.get(image_id=image_id)
+        image = Image.objects.get(image_id=self._image_id)
         image.change_status_to(Image.SUCCEEDED)
         image.set_finished_at()
-        LOGGER.info(f'{image_id} succeeded')
+
+        self._remove_container()
+
+        LOGGER.info(f'{self._image_id} succeeded')
 
     def on_failure(self, exc, task_id, args, kwargs, _info):
         """Invoked when task fails. """
 
-        image_id = args.pop()
-        image = Image.objects.get(image_id=image_id)
+        image = Image.objects.get(image_id=self._image_id)
         image.change_status_to(Image.FAILED)
         image.set_finished_at()
-        LOGGER.info(f'{image_id} failed')
+
+        self._remove_container()
+
+        LOGGER.info(f'{self._image_id} failed')
