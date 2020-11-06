@@ -43,7 +43,7 @@ class Dominion(RPCServer):
             self._subscriber.close()
 
     @remote
-    async def get_rt_build_log(self, request, image_id):
+    async def get_build_log(self, request, image_id):
         self._subscriber = await aioredis.create_redis((REDIS_HOST, int(REDIS_PORT)))
         res = await self._subscriber.subscribe(f'build-log-{image_id}')
         channel = res[0]
