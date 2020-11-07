@@ -20,6 +20,12 @@ from images.models import Image
 
 from dominion.util import connect_to_redis, terminalize
 
+ENV = {
+    'CR': 'false',
+    'N': 30,
+    'TERM': 'xterm',
+}
+
 LOGGER = get_task_logger(__name__)
 
 
@@ -30,13 +36,15 @@ def build(self, image_id):
     self._container_name = f'pieman-{image_id}'
     self._image_id = image_id
 
+    env = ENV.copy()
+
     LOGGER.info(f'Start building {image_id}')
 
     channel_name = f'build-log-{image_id}'
     conn = connect_to_redis()
     container = DOCKER_CLIENT.containers.run('count-von-count',
                                              detach=True, name=self._container_name,
-                                             environment={'TERM': 'xterm'})
+                                             environment=env)
     for line in container.logs(follow=True, stream=True):
         conn.publish(channel_name, terminalize(line))
 
