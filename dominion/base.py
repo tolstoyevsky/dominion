@@ -15,7 +15,6 @@
 import docker
 from celery import Task
 from celery.utils.log import get_task_logger
-from docker.errors import DockerException
 
 from images.models import Image
 
@@ -33,14 +32,10 @@ class BaseBuildTask(Task):
     def __init__(self):
         super().__init__()
 
-        self._container_name = self._image_id = None
+        self._container = self._image_id = None
 
     def _remove_container(self):
-        try:
-            container = DOCKER_CLIENT.containers.get(self._container_name)
-            container.remove()
-        except DockerException:
-            """There is nothing to do. """
+        self._container.remove()
 
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """
@@ -48,6 +43,7 @@ class BaseBuildTask(Task):
         image = Image.objects.get(image_id=self._image_id)
         image.change_status_to(Image.SUCCEEDED)
         image.set_finished_at()
+        image.store_build_log(self._container.logs())
 
         self._remove_container()
 
@@ -59,6 +55,7 @@ class BaseBuildTask(Task):
         image = Image.objects.get(image_id=self._image_id)
         image.change_status_to(Image.FAILED)
         image.set_finished_at()
+        image.store_build_log(self._container.logs())
 
         self._remove_container()
 
