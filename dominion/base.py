@@ -34,29 +34,27 @@ class BaseBuildTask(Task):
 
         self._container = self._image_id = None
 
+    def _finish(self, status):
+        image = Image.objects.get(image_id=self._image_id)
+        image.change_status_to(status)
+        image.set_finished_at()
+        image.store_build_log(self._container.logs())
+
+        self._remove_container()
+
     def _remove_container(self):
         self._container.remove()
 
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """
 
-        image = Image.objects.get(image_id=self._image_id)
-        image.change_status_to(Image.SUCCEEDED)
-        image.set_finished_at()
-        image.store_build_log(self._container.logs())
-
-        self._remove_container()
+        self._finish(Image.SUCCEEDED)
 
         LOGGER.info(f'{self._image_id} succeeded')
 
     def on_failure(self, exc, task_id, args, kwargs, _info):
         """Invoked when task fails. """
 
-        image = Image.objects.get(image_id=self._image_id)
-        image.change_status_to(Image.FAILED)
-        image.set_finished_at()
-        image.store_build_log(self._container.logs())
-
-        self._remove_container()
+        self._finish(Image.FAILED)
 
         LOGGER.info(f'{self._image_id} failed')
