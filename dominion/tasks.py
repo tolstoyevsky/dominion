@@ -33,7 +33,7 @@ LOGGER = get_task_logger(__name__)
 def build(self, image_id):
     """Builds an image. """
 
-    self._image_id = image_id
+    self.request.kwargs['image_id'] = image_id
 
     env = ENV.copy()
 
@@ -42,10 +42,13 @@ def build(self, image_id):
     channel_name = f'build-log-{image_id}'
     container_name = f'pieman-{image_id}'
     conn = connect_to_redis()
-    self._container = DOCKER_CLIENT.containers.run('count-von-count',
-                                                   detach=True, name=container_name,
-                                                   environment=env)
-    for line in self._container.logs(follow=True, stream=True):
+    run_kwargs = {
+        'detach': True,
+        'name': container_name,
+        'environment': env,
+    }
+    self.request.kwargs['container'] = DOCKER_CLIENT.containers.run('count-von-count', **run_kwargs)
+    for line in self.request.kwargs['container'].logs(follow=True, stream=True):
         conn.publish(channel_name, terminalize(line))
 
 
