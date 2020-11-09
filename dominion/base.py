@@ -29,32 +29,31 @@ class BaseBuildTask(Task):
     handlers outside of the build task.
     """
 
-    def __init__(self):
-        super().__init__()
+    def _finish(self, status, **kwargs):
+        container = kwargs['container']
+        image_id = kwargs['image_id']
 
-        self._container = self._image_id = None
-
-    def _finish(self, status):
-        image = Image.objects.get(image_id=self._image_id)
+        image = Image.objects.get(image_id=image_id)
         image.change_status_to(status)
         image.set_finished_at()
-        image.store_build_log(self._container.logs())
+        image.store_build_log(container.logs())
 
-        self._remove_container()
+        self._remove_container(container)
 
-    def _remove_container(self):
-        self._container.remove()
+    @staticmethod
+    def _remove_container(container):
+        container.remove()
 
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """
 
-        self._finish(Image.SUCCEEDED)
+        self._finish(Image.SUCCEEDED, **kwargs)
 
-        LOGGER.info(f'{self._image_id} succeeded')
+        LOGGER.info(f'{kwargs["image_id"]} succeeded')
 
     def on_failure(self, exc, task_id, args, kwargs, _info):
         """Invoked when task fails. """
 
-        self._finish(Image.FAILED)
+        self._finish(Image.FAILED, **kwargs)
 
-        LOGGER.info(f'{self._image_id} failed')
+        LOGGER.info(f'{kwargs["image_id"]} failed')
