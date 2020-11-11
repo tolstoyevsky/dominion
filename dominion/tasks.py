@@ -15,9 +15,13 @@
 import time
 
 from celery.utils.log import get_task_logger
-from docker.errors import APIError, NotFound
+
+from images.models import Image
+
 from dominion.app import APP
-from dominion.base import DOCKER, BaseBuildTask
+from dominion.base import BaseBuildTask
+from dominion.engine import EXIT_STATUS, PiemanDocker
+from dominion.exceptions import DoesNotExist, Failed, Interrupted
 from dominion.settings import (
     CHANNEL_NAME,
     CONTAINER_NAME,
@@ -26,17 +30,7 @@ from dominion.settings import (
     QUEUE_WATCH_NAME,
     TIMEOUT,
 )
-from images.models import Image
-
-from dominion.util import check_exit_code, connect_to_redis, terminalize
-
-ENV = {
-    'CR': 'false',
-    'N': 30,
-    'TERM': 'xterm',
-}
-
-EXIT_STATUS = 'exited'
+from dominion.util import connect_to_redis
 
 LOGGER = get_task_logger(__name__)
 
@@ -49,26 +43,21 @@ def build(self, image_id):
     LOGGER.info(f'Running {container_name}')
 
     self.request.kwargs['image_id'] = image_id
-
-    env = ENV.copy()
-
-    run_kwargs = {
-        'detach': True,
-        'name': container_name,
-        'environment': env,
-    }
-    container = self.request.kwargs['container'] = DOCKER.run('count-von-count', **run_kwargs)
+    self.request.kwargs['pieman'] = pieman = PiemanDocker(container_name)
+    pieman.run()
 
     watch.apply_async((image_id, ), queue=QUEUE_WATCH_NAME)
 
     channel_name = CHANNEL_NAME.format(image_id=image_id)
     conn = connect_to_redis()
-    for line in container.logs(follow=True, stream=True):
-        conn.publish(channel_name, terminalize(line))
+    for line in pieman.logs(stream=True):
+        conn.publish(channel_name, line)
 
-    container.reload()
-    exit_code = container.wait()
-    check_exit_code(exit_code['StatusCode'])
+    try:
+        pieman.wait()
+    except Interrupted as exc:
+        conn.publish(channel_name, str(exc))
+        raise exc
 
 
 @APP.task
@@ -91,17 +80,16 @@ def watch(image_id):
     LOGGER.info(f'Watching {container_name}')
 
     try:
-        container = DOCKER.get(container_name)
-    except NotFound:
+        pieman = PiemanDocker(container_name, must_exist=True)
+    except DoesNotExist:
         LOGGER.info(f'{container_name} does not exist, so finishing the task')
         return
 
     retries_number = TIMEOUT // POLLING_FREQUENCY
     for _ in range(retries_number):
         try:
-            container.reload()
-            status = container.status
-        except NotFound:
+            status = pieman.get_status()
+        except DoesNotExist:
             status = EXIT_STATUS
 
         if status == EXIT_STATUS:
@@ -110,8 +98,5 @@ def watch(image_id):
 
         time.sleep(POLLING_FREQUENCY)
     else:
-        try:
-            LOGGER.info(f'Killing {container_name} because it exceeded its time limit.')
-            container.kill()
-        except APIError:  # in case the container stopped between the check and 'kill'
-            "There is nothing to do in this case. "
+        LOGGER.info(f'Killing {container_name} because it exceeded its time limit.')
+        pieman.kill()

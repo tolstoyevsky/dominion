@@ -12,17 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
-import docker
 from celery import Task
 from celery.utils.log import get_task_logger
 
 from images.models import Image
 
 from dominion.exceptions import Interrupted
-
-_DOCKER_CLIENT = docker.from_env()
-
-DOCKER = _DOCKER_CLIENT.containers
 
 LOGGER = get_task_logger(__name__)
 
@@ -34,19 +29,15 @@ class BaseBuildTask(Task):
     """
 
     def _finish(self, status, **kwargs):
-        container = kwargs['container']
+        pieman = kwargs['pieman']
         image_id = kwargs['image_id']
 
         image = Image.objects.get(image_id=image_id)
         image.change_status_to(status)
         image.set_finished_at()
-        image.store_build_log(container.logs())
+        image.store_build_log(pieman.logs())
 
-        self._remove_container(container)
-
-    @staticmethod
-    def _remove_container(container):
-        container.remove()
+        pieman.remove()
 
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """
