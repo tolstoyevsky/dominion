@@ -72,7 +72,7 @@ def build(self, image_id):
 
 
 @APP.task
-def spawn_builds():
+def spawn():
     """Spawns the 'build' tasks. """
 
     image = Image.objects.get_any()
