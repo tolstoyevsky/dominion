@@ -24,6 +24,10 @@ INSTALLED_APPS = [
     'images',
 ]
 
+CHANNEL_NAME = 'build-log-{image_id}'
+
+CONTAINER_NAME = 'pieman-{image_id}'
+
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
@@ -36,6 +40,8 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 
 EMAIL_USE_SSL = bool(os.environ.get('EMAIL_USE_SSL', True))
 
+POLLING_FREQUENCY = int(os.getenv('POLLING_FREQUENCY', '15'))  # in seconds
+
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', '127.0.0.1')
 
 RABBITMQ_PORT = os.getenv('RABBITMQ_PORT', '5672')
@@ -44,9 +50,17 @@ REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
 
 REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 
+TIMEOUT = int(os.getenv('TIMEOUT', '3600'))  # in seconds (an hour by default)
+
+#
+# Celery
+#
+
 QUEUE_BEAT_NAME = 'beat'
 
 QUEUE_BUILD_NAME = 'build'
+
+QUEUE_WATCH_NAME = 'watch'
 
 CELERY_BEAT_SCHEDULE = {
     'kick-off-build': {
