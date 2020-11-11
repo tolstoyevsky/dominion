@@ -12,9 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License
 
+class DoesNotExist(Exception):
+    """Raised if the required Pieman container does not exist. """
+
+
 class Failed(Exception):
     """Raised if the status code of the Pieman container is greater than 0. """
 
 
 class Interrupted(Exception):
     """Raised if the status code of the Pieman container is 137. """
+
+    def __init__(self):
+        blue = '\x1b[34m'
+        reset = '\x1b[m'
+        super().__init__(f'{blue}Interrupted{reset}: building exceeded its time limit.')

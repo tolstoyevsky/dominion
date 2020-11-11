@@ -14,18 +14,7 @@
 
 import redis
 
-from dominion.exceptions import Failed, Interrupted
 from dominion.settings import REDIS_HOST, REDIS_PORT
-
-
-def check_exit_code(exit_code):
-    """Checks the Pieman containers status codes. """
-
-    if exit_code == 137:
-        raise Interrupted
-
-    if exit_code > 0:
-        raise Failed
 
 
 def connect_to_redis():
@@ -37,7 +26,3 @@ def connect_to_redis():
     conn.ping()
 
     return conn
-
-
-def terminalize(line):
-    return line.decode('utf-8').replace('\n', '\r\n')
