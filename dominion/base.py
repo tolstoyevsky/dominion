@@ -18,7 +18,11 @@ from celery.utils.log import get_task_logger
 
 from images.models import Image
 
-DOCKER_CLIENT = docker.from_env()
+from dominion.exceptions import Interrupted
+
+_DOCKER_CLIENT = docker.from_env()
+
+DOCKER = _DOCKER_CLIENT.containers
 
 LOGGER = get_task_logger(__name__)
 
@@ -52,8 +56,11 @@ class BaseBuildTask(Task):
         LOGGER.info(f'{kwargs["image_id"]} succeeded')
 
     def on_failure(self, exc, task_id, args, kwargs, _info):
-        """Invoked when task fails. """
+        """Invoked when task fails or is interrupted by the 'watch' task. """
 
-        self._finish(Image.FAILED, **kwargs)
-
-        LOGGER.info(f'{kwargs["image_id"]} failed')
+        if isinstance(exc, Interrupted):
+            self._finish(Image.INTERRUPTED, **kwargs)
+            LOGGER.info(f'{kwargs["image_id"]} interrupted')
+        else:
+            self._finish(Image.FAILED, **kwargs)
+            LOGGER.info(f'{kwargs["image_id"]} failed')
