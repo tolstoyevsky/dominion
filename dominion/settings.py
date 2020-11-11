@@ -63,8 +63,8 @@ QUEUE_BUILD_NAME = 'build'
 QUEUE_WATCH_NAME = 'watch'
 
 CELERY_BEAT_SCHEDULE = {
-    'kick-off-build': {
-        'task': 'dominion.tasks.spawn_builds',
+    'kick-off-build-tasks': {
+        'task': 'dominion.tasks.spawn',
         'schedule': 5,
         'options': {'queue': QUEUE_BEAT_NAME},
     },
