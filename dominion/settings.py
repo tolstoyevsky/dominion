@@ -1,6 +1,8 @@
 import os
 
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 DEBUG = False
 
 # Do not run anything if SECRET_KEY is not set.
@@ -24,21 +26,30 @@ INSTALLED_APPS = [
     'images',
 ]
 
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            BASE_DIR + '/templates/',
+        ],
+    },
+]
+
 CHANNEL_NAME = 'build-log-{image_id}'
 
 CONTAINER_NAME = 'pieman-{image_id}'
 
 EMAIL_HOST = os.environ.get('EMAIL_HOST')
 
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 465))
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
 
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'info@cusdeb.com')
 
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
-EMAIL_USE_SSL = bool(os.environ.get('EMAIL_USE_SSL', True))
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true'
 
 POLLING_FREQUENCY = int(os.getenv('POLLING_FREQUENCY', '15'))  # in seconds
 
@@ -59,6 +70,8 @@ TIMEOUT = int(os.getenv('TIMEOUT', '3600'))  # in seconds (an hour by default)
 QUEUE_BEAT_NAME = 'beat'
 
 QUEUE_BUILD_NAME = 'build'
+
+QUEUE_EMAIL_NAME = 'email'
 
 QUEUE_WATCH_NAME = 'watch'
 
