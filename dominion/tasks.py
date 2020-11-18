@@ -15,13 +15,15 @@
 import time
 
 from celery.utils.log import get_task_logger
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
 
 from images.models import Image
 
+from dominion import base
 from dominion.app import APP
-from dominion.base import BaseBuildTask
 from dominion.engine import EXIT_STATUS, PiemanDocker
-from dominion.exceptions import DoesNotExist, Failed, Interrupted
+from dominion.exceptions import DoesNotExist, Failed, Interrupted, UnknownStatus
 from dominion.settings import (
     CHANNEL_NAME,
     CONTAINER_NAME,
@@ -35,7 +37,7 @@ from dominion.util import connect_to_redis
 LOGGER = get_task_logger(__name__)
 
 
-@APP.task(bind=True, base=BaseBuildTask)
+@APP.task(bind=True, base=base.BaseBuildTask)
 def build(self, image_id):
     """Builds an image. """
 
@@ -58,6 +60,25 @@ def build(self, image_id):
     except Interrupted as exc:
         conn.publish(channel_name, str(exc))
         raise exc
+
+
+@APP.task
+def email(image_id, status):
+    """Sends an email to the user when their image is successful, failed or interrupted. """
+
+    image = Image.objects.get(image_id=image_id)
+
+    if status == Image.SUCCEEDED:
+        template = 'successful.html'
+    elif status == Image.FAILED:
+        template = 'failed.html'
+    elif status == Image.INTERRUPTED:
+        template = 'interrupted.html'
+    else:
+        raise UnknownStatus
+
+    message = render_to_string(template, context={'username': image.user.username})
+    send_mail('CusDeb', message, None, [image.user.email])
 
 
 @APP.task

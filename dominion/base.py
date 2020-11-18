@@ -17,7 +17,9 @@ from celery.utils.log import get_task_logger
 
 from images.models import Image
 
+from dominion import tasks
 from dominion.exceptions import Interrupted
+from dominion.settings import QUEUE_EMAIL_NAME
 
 LOGGER = get_task_logger(__name__)
 
@@ -27,6 +29,17 @@ class BaseBuildTask(Task):
     The primary goal of the class is to make it possible to maintain the 'success' and 'failure'
     handlers outside of the build task.
     """
+
+    def _email(self, image_id, status):
+        email_kwargs = {
+            'queue': QUEUE_EMAIL_NAME,
+            'retry': True,
+            'retry_policy': {
+                'max_retries': 6,
+                'interval_max': 10,
+            },
+        }
+        tasks.email.apply_async((image_id, status, ), **email_kwargs)
 
     def _finish(self, status, **kwargs):
         pieman = kwargs['pieman']
@@ -38,6 +51,8 @@ class BaseBuildTask(Task):
         image.store_build_log(pieman.logs())
 
         pieman.remove()
+
+        self._email(image_id, status)
 
     def on_success(self, retval, task_id, args, kwargs):
         """Invoked when a task succeeds. """

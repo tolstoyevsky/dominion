@@ -27,3 +27,7 @@ class Interrupted(Exception):
         blue = '\x1b[34m'
         reset = '\x1b[m'
         super().__init__(f'{blue}Interrupted{reset}: building exceeded its time limit.')
+
+
+class UnknownStatus(Exception):
+    """Raised if the 'email' task takes a status it is not familiar with. """
