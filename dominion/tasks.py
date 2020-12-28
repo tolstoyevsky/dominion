@@ -15,6 +15,7 @@
 import time
 
 from celery.utils.log import get_task_logger
+from django.conf import settings
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
@@ -35,6 +36,18 @@ from dominion.settings import (
 from dominion.util import connect_to_redis
 
 LOGGER = get_task_logger(__name__)
+
+
+@APP.task
+def contact_us_email(name, email_, message):
+    """Sends the contact us email to the CusDeb. """
+
+    html_message = render_to_string('contact_us.html', context={
+        'name': name,
+        'email': email_,
+        'message': message,
+    })
+    send_mail('CusDeb', html_message, None, [settings.DEFAULT_FROM_EMAIL])
 
 
 @APP.task(bind=True, base=base.BaseBuildTask)
