@@ -84,3 +84,11 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 CELERY_BROKER_URL = f'amqp://guest:guest@{RABBITMQ_HOST}:{RABBITMQ_PORT}//'
+
+ROCKET_CHAT_DOMAIN = os.getenv('ROCKET_CHAT_DOMAIN', 'https://rc.cusdeb.com/')
+
+ROCKET_CHAT_USERNAME = os.getenv('ROCKET_CHAT_USERNAME')
+
+ROCKET_CHAT_PASSWORD = os.getenv('ROCKET_CHAT_PASSWORD')
+
+ROCKET_CHAT_ROOM = os.getenv('ROCKET_CHAT_ROOM', 'cusdeb-contact-us')

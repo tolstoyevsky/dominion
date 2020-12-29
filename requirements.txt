@@ -4,5 +4,6 @@ docker==4.3.1
 Django==2.2.16
 psycopg2==2.8.6
 redis==3.5.3
+rocket-python==1.2.15
 
 -e git+https://github.com/tolstoyevsky/shirow.git@ng#egg=shirow
