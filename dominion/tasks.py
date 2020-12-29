@@ -23,6 +23,7 @@ from images.models import Image
 
 from dominion import base
 from dominion.app import APP
+from dominion.chat import Chat
 from dominion.engine import EXIT_STATUS, PiemanDocker
 from dominion.exceptions import DoesNotExist, Failed, Interrupted, UnknownStatus
 from dominion.settings import (
@@ -48,6 +49,9 @@ def contact_us_email(name, email_, message):
         'message': message,
     })
     send_mail('CusDeb', html_message, None, [settings.DEFAULT_FROM_EMAIL])
+
+    chat = Chat(settings.ROCKET_CHAT_ROOM)
+    chat.contact_us(name, email_, message)
 
 
 @APP.task(bind=True, base=base.BaseBuildTask)
