@@ -39,8 +39,6 @@ class PiemanDocker:
             'detach': True,
             'name': container_name,
             'environment': {
-                'CR': 'false',
-                'N': 30,
                 'TERM': 'xterm',
             },
         }
@@ -104,7 +102,7 @@ class PiemanDocker:
         if env:
             self._run_kwargs['environment'].update(env)
 
-        self._container = DOCKER.run('count-von-count', **self._run_kwargs)
+        self._container = DOCKER.run('cusdeb/pieman', **self._run_kwargs)
 
     def wait(self):
         """Blocks until the Pieman container stops, then check its exit code.
