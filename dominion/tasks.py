@@ -41,12 +41,18 @@ LOGGER = get_task_logger(__name__)
 def build(self, image_id):
     """Builds an image. """
 
+    image = Image.objects.get(image_id=image_id)
+    env = {
+        'DEVICE': image.device_name,
+        'OS': image.distro_name,
+    }
+
     container_name = CONTAINER_NAME.format(image_id=image_id)
     LOGGER.info(f'Running {container_name}')
 
     self.request.kwargs['image_id'] = image_id
     self.request.kwargs['pieman'] = pieman = PiemanDocker(container_name)
-    pieman.run()
+    pieman.run(env=env)
 
     watch.apply_async((image_id, ), queue=QUEUE_WATCH_NAME)
 
