@@ -15,6 +15,7 @@
 import docker
 from docker.errors import APIError, NotFound
 
+from dominion import settings
 from dominion.exceptions import DoesNotExist, Failed, Interrupted
 
 _DOCKER_CLIENT = docker.from_env()
@@ -38,6 +39,12 @@ class PiemanDocker:
         self._run_kwargs = {
             'detach': True,
             'name': container_name,
+            'privileged': True,
+            'remove': True,
+            'volumes': {
+                '/dev': {'bind':'/dev', 'mode': 'rw'},
+                settings.BUILD_RESULT_PATH: {'bind':'/result', 'mode': 'rw'},
+            },
             'environment': {
                 'TERM': 'xterm',
             },
