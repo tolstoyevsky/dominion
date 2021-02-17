@@ -40,7 +40,6 @@ class PiemanDocker:
             'detach': True,
             'name': container_name,
             'privileged': True,
-            'remove': True,
             'volumes': {
                 '/dev': {'bind':'/dev', 'mode': 'rw'},
                 settings.BUILD_RESULT_PATH: {'bind':'/result', 'mode': 'rw'},
