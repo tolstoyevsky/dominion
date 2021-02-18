@@ -45,6 +45,7 @@ def build(self, image_id):
     env = {
         'DEVICE': image.device_name,
         'OS': image.distro_name,
+        'PROJECT_NAME': image_id,
     }
 
     container_name = CONTAINER_NAME.format(image_id=image_id)
