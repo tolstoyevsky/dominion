@@ -48,6 +48,11 @@ def build(self, image_id):
         'PROJECT_NAME': image_id,
     }
 
+    for prop_key, prop_value in image.props.items():
+        if prop_key.startswith('PIEMAN_'):
+            env_name = prop_key.replace('PIEMAN_', '')
+            env[env_name] = prop_value
+
     container_name = CONTAINER_NAME.format(image_id=image_id)
     LOGGER.info(f'Running {container_name}')
 
