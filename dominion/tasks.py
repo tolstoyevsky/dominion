@@ -43,6 +43,7 @@ def build(self, image_id):
 
     image = Image.objects.get(image_id=image_id)
     env = {
+        'COMPRESS_WITH_GZIP': 'true',
         'DEVICE': image.device_name,
         'OS': image.distro_name,
         'PROJECT_NAME': image_id,
