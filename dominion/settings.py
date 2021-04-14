@@ -63,7 +63,7 @@ REDIS_PORT = int(os.getenv('REDIS_PORT', '6379'))
 
 TIMEOUT = int(os.getenv('TIMEOUT', '3600'))  # in seconds (an hour by default)
 
-BUILD_RESULT_PATH = os.environ['BUILD_RESULT_PATH']
+BUILD_RESULT_PATH = os.getenv('BUILD_RESULT_PATH')
 
 #
 # Celery
