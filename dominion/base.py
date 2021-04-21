@@ -48,7 +48,7 @@ class BaseBuildTask(Task):
         image = Image.objects.get(image_id=image_id)
         image.change_status_to(status)
         image.set_finished_at()
-        image.store_build_log(pieman.logs())
+        image.store_build_log(pieman.logs().decode('utf-8'))
 
         pieman.remove()
 
